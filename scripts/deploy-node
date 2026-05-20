@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/lib/cluster-nodes.sh
+source "$script_dir/lib/cluster-nodes.sh"
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: scripts/deploy-node <node-name>
+
+Environment:
+  HEMERA_DEPLOY_USER  SSH user for nixos-rebuild target-host (default: root)
+  HEMERA_DRY_RUN      If set to 1, print the command instead of running it
+USAGE
+}
+
+if [[ $# -ne 1 ]]; then
+  usage
+  exit 2
+fi
+
+node="$1"
+require_cluster_node "$node"
+target="$(cluster_node_target "$node")"
+
+cmd=(
+  nixos-rebuild switch
+  --flake ".#$node"
+  --target-host "$target"
+)
+
+if [[ ${HEMERA_DRY_RUN:-0} == "1" ]]; then
+  printf '%q ' "${cmd[@]}"
+  printf '\n'
+  exit 0
+fi
+
+exec "${cmd[@]}"

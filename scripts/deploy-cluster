@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/lib/cluster-nodes.sh
+source "$script_dir/lib/cluster-nodes.sh"
+
+for node in "${CLUSTER_NODES[@]}"; do
+  echo "==> Deploying $node ($(cluster_node_role "$node"))"
+  "$script_dir/deploy-node" "$node"
+done

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+hosts=(k8s-cp-01 k8s-worker-01 k8s-worker-02)
+
+for host in "${hosts[@]}"; do
+  echo "==> Evaluating NixOS configuration for $host"
+  nix eval --raw ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath" >/dev/null
+done
+
+echo "all Cluster Node configurations evaluated"

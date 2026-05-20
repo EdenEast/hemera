@@ -1,0 +1,95 @@
+terraform {
+  required_version = ">= 1.6.0"
+
+  required_providers {
+    proxmox = {
+      source  = "bpg/proxmox"
+      version = "~> 0.66"
+    }
+  }
+}
+
+provider "proxmox" {
+  endpoint  = var.proxmox_endpoint
+  api_token = var.proxmox_api_token
+  insecure  = var.proxmox_insecure
+}
+
+locals {
+  cluster_nodes = {
+    k8s-cp-01 = {
+      vm_id     = 501
+      role      = "control-plane"
+      ip        = "192.168.1.50"
+      cores     = 2
+      memory_mb = 3072
+      disk_gb   = 40
+    }
+    k8s-worker-01 = {
+      vm_id     = 511
+      role      = "worker"
+      ip        = "192.168.1.51"
+      cores     = 2
+      memory_mb = 3072
+      disk_gb   = 60
+    }
+    k8s-worker-02 = {
+      vm_id     = 512
+      role      = "worker"
+      ip        = "192.168.1.52"
+      cores     = 2
+      memory_mb = 3072
+      disk_gb   = 60
+    }
+  }
+}
+
+resource "proxmox_virtual_environment_vm" "cluster_node" {
+  for_each = local.cluster_nodes
+
+  name      = each.key
+  node_name = var.proxmox_node_name
+  vm_id     = each.value.vm_id
+  tags      = ["hemera", "initial-setup", each.value.role]
+
+  description = "Hemera Initial Setup ${each.value.role} Cluster Node. OS and k3s state are managed by NixOS, not Terraform."
+
+  agent {
+    enabled = true
+  }
+
+  clone {
+    vm_id = var.nixos_template_id
+    full  = true
+  }
+
+  cpu {
+    cores = each.value.cores
+    type  = "host"
+  }
+
+  memory {
+    dedicated = each.value.memory_mb
+  }
+
+  disk {
+    datastore_id = var.proxmox_datastore_id
+    interface    = "scsi0"
+    size         = each.value.disk_gb
+  }
+
+  network_device {
+    bridge = var.proxmox_bridge
+    model  = "virtio"
+  }
+
+  operating_system {
+    type = "l26"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      initialization,
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+# Terraform
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/*.tfvars
+!**/*.tfvars.example
+
+# Generated files
+generated/
+.direnv/
+
+# Secrets
+/secrets/
+**/*.agekey
+**/*.age-key.txt
+/age.key
+/keys.txt
+nix/secrets/*.plain.*
+nix/secrets/*.plaintext.*
+
+# Local kubeconfig
+kubeconfig
+*.kubeconfig
+
+# sops plaintext temp files
+*.dec.yaml
+*.decrypted.yaml
+*.unencrypted.yaml

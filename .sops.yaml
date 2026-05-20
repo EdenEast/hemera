@@ -1,0 +1,23 @@
+# sops recipient scaffold for Hemera Initial Setup.
+#
+# Replace these placeholder recipients before encrypting real secret material.
+# The admin recipient can be created now. Host recipients must wait until the
+# real Cluster Nodes have booted once and generated unique SSH host keys.
+# Convert a host SSH public key to an age recipient with ssh-to-age, for example:
+#   ssh-keyscan -t ed25519 192.168.1.50 | ssh-to-age
+
+keys:
+  - &admin age1REPLACE_WITH_ADMIN_PUBLIC_KEY
+  - &k8s_cp_01 age1REPLACE_WITH_K8S_CP_01_HOST_RECIPIENT
+  - &k8s_worker_01 age1REPLACE_WITH_K8S_WORKER_01_HOST_RECIPIENT
+  - &k8s_worker_02 age1REPLACE_WITH_K8S_WORKER_02_HOST_RECIPIENT
+
+creation_rules:
+  - path_regex: ^nix/secrets/[^/]+\.yaml$
+    encrypted_regex: ^(token)$
+    key_groups:
+      - age:
+          - *admin
+          - *k8s_cp_01
+          - *k8s_worker_01
+          - *k8s_worker_02
