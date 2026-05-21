@@ -1,4 +1,8 @@
-{pkgs, ...}: {
+{
+  config,
+  pkgs,
+  ...
+}: {
   imports = [
     ./admin-ssh-keys.nix
     ./secrets.nix
@@ -39,6 +43,20 @@
 
   services.qemuGuest.enable = true;
 
+  # Longhorn runs inside Kubernetes, but every Cluster Node needs the host-side
+  # tools required to attach Longhorn volumes and use NFS backup targets.
+  services.openiscsi = {
+    enable = true;
+    name = "iqn.2026-05.local.hemera:${config.networking.hostName}";
+  };
+
+  # Longhorn checks for iscsiadm from inside a privileged pod after entering the
+  # host mount namespace. On NixOS the binary lives under /run/current-system,
+  # while Longhorn expects a conventional FHS path.
+  systemd.tmpfiles.rules = [
+    "L+ /usr/bin/iscsiadm - - - - ${pkgs.openiscsi}/bin/iscsiadm"
+  ];
+
   users.users.admin = {
     isNormalUser = true;
     extraGroups = ["wheel"];
@@ -52,6 +70,8 @@
     git
     htop
     jq
+    nfs-utils
+    openiscsi
     tcpdump
     vim
   ];

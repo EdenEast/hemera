@@ -78,7 +78,11 @@
         age
         direnv
         jq
+        k9s
         kubectl
+        kubernetes-helm
+        kubernetes-helmPlugins.helm-diff
+        helmfile
         nixos-rebuild
         openssh
         shellcheck
@@ -88,6 +92,8 @@
         treefmtEval.config.build.wrapper
         yq-go
       ];
+
+      HELM_PLUGINS = "${pkgs.kubernetes-helmPlugins.helm-diff}";
 
       shellHook = ''
         echo ""

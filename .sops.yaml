@@ -8,10 +8,9 @@
 
 keys:
   - &admin age13t2y9dy344ss05kr0ysgvl42xgg6wkmzw5cgnrdkjea6x3tftdnsmy2tmh
-  - &k8s_cp_01 age1tkvez0d7hy50kag85v40jep05w879p95q9fw9u6afju8tpccvuzqlgr3sm
-  - &k8s_worker_01 age1ngdp6w2mpcfv54tkmc75a57ra2r956xvdt7xugahyqwn7409dezq2ap5yt
-  - &k8s_worker_02 age14mh9ujjzejmrv9e22l8pne3djqpyk0kxz9kl4ncfx4tkvzsawqwqe6xdjm
-
+  - &k8s_cp_01 age1562ws2s8xya8dhur9cm5k8wt8a4vdn6vwz5sdqawv2gy6xws74mq0q9cdt
+  - &k8s_worker_01 age1cqv6v8fmghfzul8x44rjfrk8x8lp7k8xv76vx7av8ykuffjv9fuqptw5eg
+  - &k8s_worker_02 age17l2c5wqk9lgq79kwkgw3hgkuklun5sn5rmy8j84gsj4f630psytq8ugeqe
 creation_rules:
   - path_regex: ^nix/secrets/[^/]+\.yaml$
     encrypted_regex: ^(token)$

@@ -351,11 +351,14 @@ After Initial Setup:
 - Evaluate Cilium or another advanced Kubernetes networking stack.
 - Move from single-host Proxmox VMs to multiple physical Kubernetes nodes when hardware is available.
 
-## Open Questions
+## Resolved Initial Setup Values
 
-- What is the actual LAN CIDR, gateway, and DNS server?
-- What static IP range is outside the DHCP pool?
-- What is the Proxmox bridge name?
-- What Proxmox storage pool should VM disks use?
-- What NixOS template creation method will be used?
-- Which local domain, if any, should be used for cluster services?
+- LAN CIDR: `192.168.2.0/24`.
+- Gateway: `192.168.2.1`.
+- DNS server: `192.168.2.1`.
+- Static infrastructure range: `192.168.2.80-192.168.2.99` for Hemera, with Cluster Nodes assigned `192.168.2.81-192.168.2.83`.
+- Proxmox bridge: `vmbr0`.
+- Proxmox VM disk datastore: `local-lvm`.
+- Proxmox image/template datastore: `local`.
+- NixOS template method: build `.#proxmox-template` from the upstream nixpkgs Proxmox image module and register it with `scripts/register-proxmox-template`.
+- Initial local service test domain: `whoami.hemera.local` for the smoke-test ingress.

@@ -18,28 +18,31 @@ provider "proxmox" {
 locals {
   cluster_nodes = {
     k8s-cp-01 = {
-      vm_id     = 501
-      role      = "control-plane"
-      ip        = "192.168.2.81"
-      cores     = 2
-      memory_mb = 3072
-      disk_gb   = 40
+      vm_id              = 501
+      role               = "control-plane"
+      ip                 = "192.168.2.81"
+      cores              = 2
+      memory_mb          = 3072
+      memory_floating_mb = 1536
+      disk_gb            = 40
     }
     k8s-worker-01 = {
-      vm_id     = 511
-      role      = "worker"
-      ip        = "192.168.2.82"
-      cores     = 2
-      memory_mb = 3072
-      disk_gb   = 60
+      vm_id              = 511
+      role               = "worker"
+      ip                 = "192.168.2.82"
+      cores              = 2
+      memory_mb          = 3072
+      memory_floating_mb = 1024
+      disk_gb            = 60
     }
     k8s-worker-02 = {
-      vm_id     = 512
-      role      = "worker"
-      ip        = "192.168.2.83"
-      cores     = 2
-      memory_mb = 3072
-      disk_gb   = 60
+      vm_id              = 512
+      role               = "worker"
+      ip                 = "192.168.2.83"
+      cores              = 2
+      memory_mb          = 3072
+      memory_floating_mb = 1024
+      disk_gb            = 60
     }
   }
 }
@@ -72,6 +75,7 @@ resource "proxmox_virtual_environment_vm" "cluster_node" {
 
   memory {
     dedicated = each.value.memory_mb
+    floating  = each.value.memory_floating_mb
   }
 
   disk {

@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+# shellcheck source=scripts/lib/cluster-nodes.sh
+# shellcheck disable=SC1091
+source "$script_dir/lib/cluster-nodes.sh"
+
+sops_file="$repo_root/.sops.yaml"
+ssh_connect_timeout="5"
+dry_run=0
+rekey=0
+ignore_known_hosts=0
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: scripts/update-sops-host-recipients [--dry-run] [--rekey] [--ignore-known-hosts]
+
+Updates the Cluster Node age recipients in .sops.yaml from the nodes' current
+SSH host public keys.
+
+Options:
+  --dry-run             Print the recipients that would be written, but do not edit files.
+  --rekey               Run `sops updatekeys -y nix/secrets/*.yaml` after updating .sops.yaml.
+  --ignore-known-hosts  Ignore local known_hosts when reading node host keys.
+                        Useful after recreating Cluster Nodes, but weaker than
+                        verifying host keys out-of-band.
+
+Why this exists:
+  sops-nix decrypts node secrets using each Cluster Node's SSH host private key.
+  Recreating a VM changes that SSH host key, so the corresponding age recipient
+  in .sops.yaml must be refreshed and encrypted secret files must be rekeyed.
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  --dry-run)
+    dry_run=1
+    ;;
+  --rekey)
+    rekey=1
+    ;;
+  --ignore-known-hosts)
+    ignore_known_hosts=1
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage
+    echo "unknown argument: $1" >&2
+    exit 2
+    ;;
+  esac
+  shift
+done
+
+for command in ssh ssh-to-age perl; do
+  if ! command -v "$command" >/dev/null; then
+    echo "missing required command: $command" >&2
+    exit 1
+  fi
+done
+
+if [[ $rekey -eq 1 ]] && ! command -v sops >/dev/null; then
+  echo "missing required command for --rekey: sops" >&2
+  exit 1
+fi
+
+if [[ ! -f $sops_file ]]; then
+  echo "missing SOPS config: $sops_file" >&2
+  exit 1
+fi
+
+fetch_recipient() {
+  local node="$1"
+  local ip
+  local target
+  local recipient
+  local ssh_options
+
+  ip="$(cluster_node_ip "$node")"
+  target="$(cluster_node_target "$node")"
+  ssh_options=(-o BatchMode=yes -o ConnectTimeout="$ssh_connect_timeout")
+
+  if [[ $ignore_known_hosts -eq 1 ]]; then
+    ssh_options+=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null)
+  fi
+
+  recipient="$(ssh "${ssh_options[@]}" "$target" 'sudo cat /etc/ssh/ssh_host_ed25519_key.pub' 2>/dev/null | ssh-to-age)"
+
+  if [[ -z $recipient ]]; then
+    echo "failed to derive age recipient for $node at $ip" >&2
+    return 1
+  fi
+
+  printf '%s' "$recipient"
+}
+
+printf 'Current Cluster Node host recipients:\n'
+
+for node in "${CLUSTER_NODES[@]}"; do
+  anchor="${node//-/_}"
+  recipient="$(fetch_recipient "$node")"
+  printf '  %-15s &%s %s\n' "$node" "$anchor" "$recipient"
+
+  if [[ $dry_run -eq 0 ]]; then
+    ANCHOR="&$anchor" RECIPIENT="$recipient" perl -0pi -e '
+      BEGIN {
+        $anchor = $ENV{"ANCHOR"};
+        $recipient = $ENV{"RECIPIENT"};
+      }
+
+      $replacement = "  - $anchor $recipient";
+      $count = s/^  - \Q$anchor\E\s+\S+\s*$/$replacement/m;
+      die "missing anchor $anchor in .sops.yaml\n" unless $count == 1;
+    ' "$sops_file"
+  fi
+done
+
+if [[ $dry_run -eq 1 ]]; then
+  echo "dry run: .sops.yaml was not modified"
+  exit 0
+fi
+
+echo "updated $sops_file"
+
+if [[ $rekey -eq 1 ]]; then
+  shopt -s nullglob
+  secret_files=("$repo_root"/nix/secrets/*.yaml)
+
+  if [[ ${#secret_files[@]} -eq 0 ]]; then
+    echo "no secret files found under nix/secrets/*.yaml"
+    exit 0
+  fi
+
+  for secret_file in "${secret_files[@]}"; do
+    echo "rekeying ${secret_file#"$repo_root"/}"
+    sops updatekeys -y "$secret_file"
+  done
+else
+  echo "next step: sops updatekeys -y nix/secrets/k3s.yaml"
+  echo "or rerun with: scripts/update-sops-host-recipients --rekey"
+fi

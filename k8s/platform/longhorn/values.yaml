@@ -1,0 +1,15 @@
+defaultSettings:
+  # Three replicas fit the current Hemera shape: one control-plane Cluster Node
+  # and two worker Cluster Nodes. This protects app volumes from a single node
+  # or disk failure, but it is not a substitute for backups.
+  defaultReplicaCount: 3
+
+  # Longhorn backup target will be set after the TrueNAS NFS dataset/export is
+  # created. Expected shape:
+  # nfs://TRUENAS_ADDRESS:/mnt/POOL/backups/longhorn
+  backupTarget: ""
+
+persistence:
+  defaultClass: false
+  defaultClassReplicaCount: 3
+  defaultFsType: ext4
