@@ -20,3 +20,12 @@ creation_rules:
           - *k8s_cp_01
           - *k8s_worker_01
           - *k8s_worker_02
+
+  - path_regex: ^k8s/.+\.sops\.ya?ml$
+    encrypted_regex: ^(data|stringData)$
+    key_groups:
+      - age:
+          - *admin
+          - *k8s_cp_01
+          - *k8s_worker_01
+          - *k8s_worker_02
