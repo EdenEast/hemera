@@ -64,6 +64,15 @@
 
     checks.${system}.formatting = treefmtEval.config.build.check self;
 
+    packages.${system}.proxmox-template =
+      (nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          "${nixpkgs}/nixos/modules/virtualisation/proxmox-image.nix"
+          ./nix/proxmox-template.nix
+        ];
+      }).config.system.build.VMA;
+
     devShells.${system}.default = pkgs.mkShell {
       packages = with pkgs; [
         age

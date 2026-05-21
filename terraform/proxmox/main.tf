@@ -20,7 +20,7 @@ locals {
     k8s-cp-01 = {
       vm_id     = 501
       role      = "control-plane"
-      ip        = "192.168.1.50"
+      ip        = "192.168.2.81"
       cores     = 2
       memory_mb = 3072
       disk_gb   = 40
@@ -28,7 +28,7 @@ locals {
     k8s-worker-01 = {
       vm_id     = 511
       role      = "worker"
-      ip        = "192.168.1.51"
+      ip        = "192.168.2.82"
       cores     = 2
       memory_mb = 3072
       disk_gb   = 60
@@ -36,7 +36,7 @@ locals {
     k8s-worker-02 = {
       vm_id     = 512
       role      = "worker"
-      ip        = "192.168.1.52"
+      ip        = "192.168.2.83"
       cores     = 2
       memory_mb = 3072
       disk_gb   = 60
@@ -47,10 +47,12 @@ locals {
 resource "proxmox_virtual_environment_vm" "cluster_node" {
   for_each = local.cluster_nodes
 
-  name      = each.key
-  node_name = var.proxmox_node_name
-  vm_id     = each.value.vm_id
-  tags      = ["hemera", "initial-setup", each.value.role]
+  name       = each.key
+  node_name  = var.proxmox_node_name
+  vm_id      = each.value.vm_id
+  tags       = ["hemera", "initial-setup", each.value.role]
+  boot_order = ["virtio0"]
+  started    = true
 
   description = "Hemera Initial Setup ${each.value.role} Cluster Node. OS and k3s state are managed by NixOS, not Terraform."
 
@@ -74,13 +76,29 @@ resource "proxmox_virtual_environment_vm" "cluster_node" {
 
   disk {
     datastore_id = var.proxmox_datastore_id
-    interface    = "scsi0"
+    interface    = "virtio0"
     size         = each.value.disk_gb
   }
 
   network_device {
     bridge = var.proxmox_bridge
     model  = "virtio"
+  }
+
+  initialization {
+    datastore_id = var.proxmox_datastore_id
+    interface    = "ide2"
+
+    dns {
+      servers = ["192.168.2.1"]
+    }
+
+    ip_config {
+      ipv4 {
+        address = "${each.value.ip}/24"
+        gateway = "192.168.2.1"
+      }
+    }
   }
 
   operating_system {

@@ -65,22 +65,23 @@ Terraform state records the infrastructure objects Terraform manages, including 
 
 | Hostname        | Role              | vCPU | RAM | Disk | Placeholder IP |
 | --------------- | ----------------- | ---: | --: | ---: | -------------- |
-| `k8s-cp-01`     | k3s control plane |    2 | 3GB | 40GB | `192.168.1.50` |
-| `k8s-worker-01` | k3s worker        |    2 | 3GB | 60GB | `192.168.1.51` |
-| `k8s-worker-02` | k3s worker        |    2 | 3GB | 60GB | `192.168.1.52` |
+| `k8s-cp-01`     | k3s control plane |    2 | 3GB | 40GB | `192.168.2.81` |
+| `k8s-worker-01` | k3s worker        |    2 | 3GB | 60GB | `192.168.2.82` |
+| `k8s-worker-02` | k3s worker        |    2 | 3GB | 60GB | `192.168.2.83` |
 
 This topology is intentionally not highly available because all nodes initially run on one physical host.
 
 ## Network Assumptions
 
-These values are placeholders and must be confirmed before implementation:
+Confirmed Initial Setup network values:
 
 ```text
-LAN CIDR: 192.168.1.0/24
-Gateway: 192.168.1.1
-DNS: 192.168.1.1
-Hemera static range: 192.168.1.50-192.168.1.80
-Proxmox bridge: TODO_CONFIRM, likely vmbr0
+Proxmox host address: 192.168.2.80/24
+LAN CIDR: 192.168.2.0/24
+Gateway: 192.168.2.1
+DNS: 192.168.2.1
+Hemera static range: 192.168.2.80-192.168.2.99
+Proxmox bridge: vmbr0
 ```
 
 Static IP addresses are configured in NixOS, not Terraform. Terraform attaches VM NICs to the correct Proxmox bridge.
@@ -167,11 +168,11 @@ These tasks must wait until Thor has a live Proxmox install:
 Values to confirm:
 
 ```text
-Proxmox API endpoint: TODO_CONFIRM
-Proxmox node name: TODO_CONFIRM
-Proxmox storage pool: TODO_CONFIRM
-Proxmox bridge: TODO_CONFIRM
-Terraform token ID: TODO_CONFIRM
+Proxmox API endpoint: https://192.168.2.80:8006/
+Proxmox node name: pve
+Proxmox storage pool: local-lvm for VM disks, local for images/templates
+Proxmox bridge: vmbr0
+Terraform token ID: stored in local terraform.tfvars only
 Terraform token secret: stored outside git
 ```
 
@@ -250,7 +251,7 @@ Underlying command shape:
 ```sh
 nixos-rebuild switch \
   --flake .#k8s-cp-01 \
-  --target-host root@192.168.1.50
+  --target-host root@192.168.2.81
 ```
 
 The control-plane node should enable the k3s server role. Worker nodes should enable the k3s agent role and join the control-plane node.
@@ -315,10 +316,10 @@ Before committing repository changes:
 After cloning Cluster Nodes from the NixOS template, validate identity uniqueness before using their host SSH keys as secret recipients:
 
 ```sh
-ssh-keyscan -t ed25519 192.168.1.50 192.168.1.51 192.168.1.52
-ssh root@192.168.1.50 cat /etc/machine-id
-ssh root@192.168.1.51 cat /etc/machine-id
-ssh root@192.168.1.52 cat /etc/machine-id
+ssh-keyscan -t ed25519 192.168.2.81 192.168.2.82 192.168.2.83
+ssh root@192.168.2.81 cat /etc/machine-id
+ssh root@192.168.2.82 cat /etc/machine-id
+ssh root@192.168.2.83 cat /etc/machine-id
 ```
 
 All SSH host key fingerprints and all machine IDs should differ.

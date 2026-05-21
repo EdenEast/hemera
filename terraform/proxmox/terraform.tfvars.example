@@ -2,10 +2,10 @@
 # terraform.tfvars is gitignored because it contains environment-specific and
 # potentially sensitive Proxmox details.
 
-proxmox_endpoint     = "https://TODO_CONFIRM:8006/"
+proxmox_endpoint     = "https://192.168.2.80:8006/"
 proxmox_api_token    = "USER@REALM!TOKENID=TOKEN_SECRET"
 proxmox_insecure     = true
-proxmox_node_name    = "TODO_CONFIRM_THOR_NODE_NAME"
+proxmox_node_name    = "pve"
 nixos_template_id    = 9000
-proxmox_datastore_id = "TODO_CONFIRM_DATASTORE"
+proxmox_datastore_id = "local-lvm"
 proxmox_bridge       = "vmbr0"

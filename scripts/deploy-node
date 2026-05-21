@@ -10,7 +10,7 @@ usage() {
 usage: scripts/deploy-node <node-name>
 
 Environment:
-  HEMERA_DEPLOY_USER  SSH user for nixos-rebuild target-host (default: root)
+  HEMERA_DEPLOY_USER  SSH user for nixos-rebuild target-host (default: admin)
   HEMERA_DRY_RUN      If set to 1, print the command instead of running it
 USAGE
 }
@@ -28,6 +28,7 @@ cmd=(
   nixos-rebuild switch
   --flake ".#$node"
   --target-host "$target"
+  --sudo
 )
 
 if [[ ${HEMERA_DRY_RUN:-0} == "1" ]]; then

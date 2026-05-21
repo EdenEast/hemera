@@ -7,12 +7,12 @@
   networking = {
     hostName = "k8s-cp-01";
     useDHCP = false;
-    defaultGateway = "192.168.1.1"; # TODO_CONFIRM
-    nameservers = ["192.168.1.1"]; # TODO_CONFIRM
-    interfaces.ens18.ipv4.addresses = [
+    defaultGateway = "192.168.2.1";
+    nameservers = ["192.168.2.1"];
+    interfaces.eth0.ipv4.addresses = [
       {
-        address = "192.168.1.50"; # TODO_CONFIRM
-        prefixLength = 24; # TODO_CONFIRM
+        address = "192.168.2.81";
+        prefixLength = 24;
       }
     ];
   };

@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 
 # Shared Cluster Node inventory for Initial Setup scripts.
-# TODO_CONFIRM: update these placeholder LAN addresses after network planning.
 
 CLUSTER_NODES=(k8s-cp-01 k8s-worker-01 k8s-worker-02)
 
 cluster_node_ip() {
   case "${1:-}" in
-  k8s-cp-01) echo "192.168.1.50" ;;
-  k8s-worker-01) echo "192.168.1.51" ;;
-  k8s-worker-02) echo "192.168.1.52" ;;
+  k8s-cp-01) echo "192.168.2.81" ;;
+  k8s-worker-01) echo "192.168.2.82" ;;
+  k8s-worker-02) echo "192.168.2.83" ;;
   *) return 1 ;;
   esac
 }
@@ -24,7 +23,7 @@ cluster_node_role() {
 
 cluster_node_target() {
   local node="${1:-}"
-  local user="${HEMERA_DEPLOY_USER:-root}"
+  local user="${HEMERA_DEPLOY_USER:-admin}"
   local ip
 
   ip="$(cluster_node_ip "$node")" || return 1

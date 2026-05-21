@@ -1,5 +1,5 @@
 variable "proxmox_endpoint" {
-  description = "Proxmox API endpoint for Thor, for example https://192.168.1.10:8006/. TODO_CONFIRM after Proxmox is installed."
+  description = "Proxmox API endpoint for Thor, for example https://192.168.2.80:8006/."
   type        = string
 }
 
@@ -16,7 +16,7 @@ variable "proxmox_insecure" {
 }
 
 variable "proxmox_node_name" {
-  description = "Proxmox node name for Thor. TODO_CONFIRM after Proxmox is installed."
+  description = "Proxmox node name for Thor, for example pve."
   type        = string
 }
 
@@ -26,12 +26,12 @@ variable "nixos_template_id" {
 }
 
 variable "proxmox_datastore_id" {
-  description = "Proxmox datastore/storage ID for VM disks. TODO_CONFIRM after Proxmox storage is configured."
+  description = "Proxmox datastore/storage ID for VM disks, for example local-lvm."
   type        = string
 }
 
 variable "proxmox_bridge" {
-  description = "Proxmox network bridge for VM NICs. TODO_CONFIRM after Proxmox networking is configured."
+  description = "Proxmox network bridge for VM NICs."
   type        = string
   default     = "vmbr0"
 }

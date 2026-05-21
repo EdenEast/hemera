@@ -7,6 +7,8 @@
 
 # Generated files
 generated/
+result
+result-*
 .direnv/
 
 # Secrets

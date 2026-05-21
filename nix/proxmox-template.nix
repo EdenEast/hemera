@@ -1,7 +1,6 @@
 {pkgs, ...}: {
   imports = [
-    ./admin-ssh-keys.nix
-    ./secrets.nix
+    ./modules/admin-ssh-keys.nix
   ];
 
   nix.settings = {
@@ -14,20 +13,6 @@
       "admin"
     ];
   };
-
-  boot.loader.grub = {
-    enable = true;
-    device = "/dev/vda";
-  };
-
-  fileSystems."/" = {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "ext4";
-  };
-
-  networking.resolvconf.extraConfig = ''
-    name_servers='192.168.2.1'
-  '';
 
   services.openssh = {
     enable = true;
@@ -55,4 +40,8 @@
     tcpdump
     vim
   ];
+
+  # Keep the template generic. Hostname, static networking, k3s role, and
+  # secrets are applied later by each Cluster Node's NixOS configuration.
+  system.stateVersion = "26.05";
 }

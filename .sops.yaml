@@ -4,13 +4,13 @@
 # The admin recipient can be created now. Host recipients must wait until the
 # real Cluster Nodes have booted once and generated unique SSH host keys.
 # Convert a host SSH public key to an age recipient with ssh-to-age, for example:
-#   ssh-keyscan -t ed25519 192.168.1.50 | ssh-to-age
+#   ssh-keyscan -t ed25519 192.168.2.81 | ssh-to-age
 
 keys:
-  - &admin age1REPLACE_WITH_ADMIN_PUBLIC_KEY
-  - &k8s_cp_01 age1REPLACE_WITH_K8S_CP_01_HOST_RECIPIENT
-  - &k8s_worker_01 age1REPLACE_WITH_K8S_WORKER_01_HOST_RECIPIENT
-  - &k8s_worker_02 age1REPLACE_WITH_K8S_WORKER_02_HOST_RECIPIENT
+  - &admin age13t2y9dy344ss05kr0ysgvl42xgg6wkmzw5cgnrdkjea6x3tftdnsmy2tmh
+  - &k8s_cp_01 age1tkvez0d7hy50kag85v40jep05w879p95q9fw9u6afju8tpccvuzqlgr3sm
+  - &k8s_worker_01 age1ngdp6w2mpcfv54tkmc75a57ra2r956xvdt7xugahyqwn7409dezq2ap5yt
+  - &k8s_worker_02 age14mh9ujjzejmrv9e22l8pne3djqpyk0kxz9kl4ncfx4tkvzsawqwqe6xdjm
 
 creation_rules:
   - path_regex: ^nix/secrets/[^/]+\.yaml$

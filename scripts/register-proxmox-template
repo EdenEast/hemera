@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+usage: scripts/register-proxmox-template <template-vm-id> <template-name>
+
+Build the NixOS Proxmox template, upload it to Proxmox, restore it as a VM,
+and convert that VM to a Proxmox template.
+
+Recommended usage is to create versioned template IDs/names, for example:
+  scripts/register-proxmox-template 9000 nixos-template-v1
+  scripts/register-proxmox-template 9001 nixos-template-v2
+
+Environment:
+  HEMERA_PROXMOX_HOST       SSH target for Proxmox (default: root@192.168.2.80)
+  HEMERA_TEMPLATE_BUILD_ATTR Nix build attr (default: .#proxmox-template)
+  HEMERA_TEMPLATE_DUMP_DIR   Remote dump directory (default: /var/lib/vz/dump)
+  HEMERA_TEMPLATE_STORAGE    Proxmox restore storage (default: local-lvm)
+  HEMERA_TEMPLATE_BRIDGE     Proxmox network bridge (default: vmbr0)
+  HEMERA_TEMPLATE_REPLACE    If 1, destroy an existing VM/template with this ID first
+USAGE
+}
+
+if [[ $# -ne 2 ]]; then
+  usage
+  exit 2
+fi
+
+template_id="$1"
+template_name="$2"
+
+if [[ ! $template_id =~ ^[0-9]+$ ]]; then
+  echo "template VM ID must be numeric: $template_id" >&2
+  exit 2
+fi
+
+proxmox_host="${HEMERA_PROXMOX_HOST:-root@192.168.2.80}"
+build_attr="${HEMERA_TEMPLATE_BUILD_ATTR:-.#proxmox-template}"
+dump_dir="${HEMERA_TEMPLATE_DUMP_DIR:-/var/lib/vz/dump}"
+storage="${HEMERA_TEMPLATE_STORAGE:-local-lvm}"
+bridge="${HEMERA_TEMPLATE_BRIDGE:-vmbr0}"
+replace="${HEMERA_TEMPLATE_REPLACE:-0}"
+
+echo "==> Building $build_attr"
+nix build "$build_attr"
+
+archive="$(find -L result -maxdepth 1 -type f -name 'vzdump-qemu-*.vma.zst' -print -quit)"
+if [[ -z $archive ]]; then
+  echo "could not find result/vzdump-qemu-*.vma.zst after build" >&2
+  exit 1
+fi
+
+archive_name="$(basename "$archive")"
+remote_archive="$dump_dir/$archive_name"
+
+echo "==> Ensuring remote dump directory exists: $proxmox_host:$dump_dir"
+ssh "$proxmox_host" mkdir -p -- "$dump_dir"
+
+echo "==> Uploading template archive to $proxmox_host:$remote_archive"
+scp "$archive" "$proxmox_host:$remote_archive"
+
+echo "==> Restoring VM $template_id and converting to template $template_name"
+ssh "$proxmox_host" bash -se -- \
+  "$template_id" \
+  "$template_name" \
+  "$remote_archive" \
+  "$storage" \
+  "$bridge" \
+  "$replace" <<'REMOTE'
+set -euo pipefail
+
+template_id="$1"
+template_name="$2"
+remote_archive="$3"
+storage="$4"
+bridge="$5"
+replace="$6"
+
+if qm status "$template_id" >/dev/null 2>&1; then
+  if [[ "$replace" == "1" ]]; then
+    echo "==> Existing VM/template $template_id found; destroying because HEMERA_TEMPLATE_REPLACE=1"
+    qm stop "$template_id" >/dev/null 2>&1 || true
+    qm destroy "$template_id" --purge true
+  else
+    echo "VM/template ID $template_id already exists. Use a new versioned ID or set HEMERA_TEMPLATE_REPLACE=1." >&2
+    exit 1
+  fi
+fi
+
+qmrestore "$remote_archive" "$template_id" --storage "$storage" --unique true
+qm set "$template_id" --name "$template_name" --agent enabled=1 --net0 "virtio,bridge=$bridge" --boot order=virtio0
+qm template "$template_id"
+qm config "$template_id"
+REMOTE
+
+cat <<EOF
+
+Template registered successfully.
+
+Update local Terraform if this is the template you want new Cluster Nodes to use:
+
+  terraform/proxmox/terraform.tfvars
+    nixos_template_id = $template_id
+
+EOF
