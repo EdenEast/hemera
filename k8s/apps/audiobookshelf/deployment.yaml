@@ -10,11 +10,19 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: audiobookshelf
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
         app.kubernetes.io/name: audiobookshelf
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 3001
+        runAsGroup: 3000
+        fsGroup: 3000
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: audiobookshelf
           image: ghcr.io/advplyr/audiobookshelf:latest
@@ -31,6 +39,9 @@ spec:
               mountPath: /config
             - name: metadata
               mountPath: /metadata
+            - name: audiobooks
+              mountPath: /audiobooks
+              readOnly: true
       volumes:
         - name: config
           persistentVolumeClaim:
@@ -38,3 +49,8 @@ spec:
         - name: metadata
           persistentVolumeClaim:
             claimName: audiobookshelf-metadata
+        - name: audiobooks
+          nfs:
+            server: 192.168.2.116
+            path: /mnt/Volume/Files/Media/Audiobooks
+            readOnly: true

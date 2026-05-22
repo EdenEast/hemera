@@ -11,11 +11,18 @@ Audiobookshelf uses Longhorn only for application state:
 
 Large audiobook media should not be stored in Longhorn. Longhorn replicas multiply storage use and, while all Cluster Nodes run on Thor, do not protect media from loss of Thor's physical SSD.
 
-The audiobook library is not mounted yet. Later, add a TrueNAS NFS media mount shaped like:
+The audiobook library is mounted from TrueNAS over NFS:
 
-- `/audiobooks` -> TrueNAS NFS export, read-only
+- `/audiobooks` -> `192.168.2.116:/mnt/Volume/Files/Media/Audiobooks`, read-only
 
-The intended media mount should be read-only from the Audiobookshelf container so the service can index and serve the library without becoming the writer of record for the media files.
+The media mount is read-only from the Audiobookshelf container so the service can index and serve the library without becoming the writer of record for the media files.
+
+The pod runs as the same numeric identity used by the TrueNAS NFS service account:
+
+- user: `audiobookshelf`, UID `3001`
+- group: `media`, GID `3000`
+
+Keeping the Kubernetes process UID/GID aligned with the TrueNAS NFS identity avoids relying on root-specific NFS mapping behavior.
 
 TrueNAS-backed Longhorn backups are not configured yet. Do not treat the current Longhorn PVCs as protected from accidental deletion or physical Thor disk loss.
 
@@ -72,7 +79,7 @@ kubectl -n audiobookshelf get pods
 kubectl -n audiobookshelf get svc,ingress
 ```
 
-The `audiobookshelf-config` and `audiobookshelf-metadata` PVCs should use the `longhorn` StorageClass and become `Bound`. The pod should become `Running` with `/config` and `/metadata` mounted from those PVCs. No large media PVC should be created in Longhorn.
+The `audiobookshelf-config` and `audiobookshelf-metadata` PVCs should use the `longhorn` StorageClass and become `Bound`. The pod should become `Running` with `/config` and `/metadata` mounted from those PVCs, plus `/audiobooks` mounted read-only from TrueNAS NFS. No large media PVC should be created in Longhorn.
 
 ## Local DNS
 
