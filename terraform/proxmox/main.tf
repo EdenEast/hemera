@@ -18,31 +18,34 @@ provider "proxmox" {
 locals {
   cluster_nodes = {
     k8s-cp-01 = {
-      vm_id              = 501
-      role               = "control-plane"
-      ip                 = "192.168.2.81"
-      cores              = 2
-      memory_mb          = 3072
-      memory_floating_mb = 1536
-      disk_gb            = 40
+      vm_id                 = 501
+      role                  = "control-plane"
+      ip                    = "192.168.2.81"
+      cores                 = 2
+      memory_mb             = 3072
+      memory_floating_mb    = 1536
+      root_disk_gb          = 40
+      longhorn_data_disk_gb = null
     }
     k8s-worker-01 = {
-      vm_id              = 511
-      role               = "worker"
-      ip                 = "192.168.2.82"
-      cores              = 2
-      memory_mb          = 3072
-      memory_floating_mb = 1024
-      disk_gb            = 60
+      vm_id                 = 511
+      role                  = "worker"
+      ip                    = "192.168.2.82"
+      cores                 = 2
+      memory_mb             = 3072
+      memory_floating_mb    = 1024
+      root_disk_gb          = 60
+      longhorn_data_disk_gb = 250
     }
     k8s-worker-02 = {
-      vm_id              = 512
-      role               = "worker"
-      ip                 = "192.168.2.83"
-      cores              = 2
-      memory_mb          = 3072
-      memory_floating_mb = 1024
-      disk_gb            = 60
+      vm_id                 = 512
+      role                  = "worker"
+      ip                    = "192.168.2.83"
+      cores                 = 2
+      memory_mb             = 3072
+      memory_floating_mb    = 1024
+      root_disk_gb          = 60
+      longhorn_data_disk_gb = 250
     }
   }
 }
@@ -81,7 +84,18 @@ resource "proxmox_virtual_environment_vm" "cluster_node" {
   disk {
     datastore_id = var.proxmox_datastore_id
     interface    = "virtio0"
-    size         = each.value.disk_gb
+    size         = each.value.root_disk_gb
+  }
+
+  dynamic "disk" {
+    for_each = each.value.longhorn_data_disk_gb == null ? [] : [each.value.longhorn_data_disk_gb]
+
+    content {
+      datastore_id = var.proxmox_datastore_id
+      interface    = "virtio1"
+      serial       = "longhorn-data"
+      size         = disk.value
+    }
   }
 
   network_device {
@@ -111,7 +125,14 @@ resource "proxmox_virtual_environment_vm" "cluster_node" {
 
   lifecycle {
     ignore_changes = [
+      # Clone settings are creation-time inputs. Existing Cluster Nodes were
+      # imported into Terraform state, so changing this block would otherwise
+      # force VM replacement instead of managing the already-running VMs.
+      clone,
       initialization,
+      keyboard_layout,
+      scsi_hardware,
+      serial_device,
     ]
   }
 }

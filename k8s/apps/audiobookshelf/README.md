@@ -4,14 +4,20 @@ Audiobookshelf is deployed as a single-replica Kubernetes app.
 
 ## Storage design
 
-Phase 1 uses Longhorn for application state:
+Audiobookshelf uses Longhorn only for application state:
 
 - `/config` -> `audiobookshelf-config` Longhorn PVC
 - `/metadata` -> `audiobookshelf-metadata` Longhorn PVC
 
-The audiobook library is not mounted yet. Later, add a read-only TrueNAS NFS mount at:
+Large audiobook media should not be stored in Longhorn. Longhorn replicas multiply storage use and, while all Cluster Nodes run on Thor, do not protect media from loss of Thor's physical SSD.
+
+The audiobook library is not mounted yet. Later, add a TrueNAS NFS media mount shaped like:
 
 - `/audiobooks` -> TrueNAS NFS export, read-only
+
+The intended media mount should be read-only from the Audiobookshelf container so the service can index and serve the library without becoming the writer of record for the media files.
+
+TrueNAS-backed Longhorn backups are not configured yet. Do not treat the current Longhorn PVCs as protected from accidental deletion or physical Thor disk loss.
 
 ## Networking
 
@@ -42,7 +48,7 @@ The Tailscale ingress requires the Tailscale Kubernetes Operator from
 
 ```sh
 export KUBECONFIG=$PWD/generated/kubeconfig
-kubectl apply -f k8s/apps/audiobookshelf/namespace.yaml
+kubectl apply -f k8s/apps/audiobookshelf/namespaces.yaml
 kubectl apply -f k8s/apps/audiobookshelf/pvc.yaml
 kubectl apply -f k8s/apps/audiobookshelf/deployment.yaml
 kubectl apply -f k8s/apps/audiobookshelf/service.yaml
@@ -60,11 +66,13 @@ kubectl apply -f k8s/apps/audiobookshelf/
 
 ```sh
 kubectl -n audiobookshelf get pvc
+kubectl -n audiobookshelf describe pvc audiobookshelf-config
+kubectl -n audiobookshelf describe pvc audiobookshelf-metadata
 kubectl -n audiobookshelf get pods
 kubectl -n audiobookshelf get svc,ingress
 ```
 
-The PVCs should become `Bound`, and the pod should become `Running`.
+The `audiobookshelf-config` and `audiobookshelf-metadata` PVCs should use the `longhorn` StorageClass and become `Bound`. The pod should become `Running` with `/config` and `/metadata` mounted from those PVCs. No large media PVC should be created in Longhorn.
 
 ## Local DNS
 

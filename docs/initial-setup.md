@@ -63,11 +63,15 @@ Terraform state records the infrastructure objects Terraform manages, including 
 
 ## Target Topology
 
-| Hostname        | Role              | vCPU | RAM | Disk | Placeholder IP |
-| --------------- | ----------------- | ---: | --: | ---: | -------------- |
-| `k8s-cp-01`     | k3s control plane |    2 | 3GB | 40GB | `192.168.2.81` |
-| `k8s-worker-01` | k3s worker        |    2 | 3GB | 60GB | `192.168.2.82` |
-| `k8s-worker-02` | k3s worker        |    2 | 3GB | 60GB | `192.168.2.83` |
+| Hostname        | Role              | vCPU | RAM | Root Disk | Longhorn Data Disk | Placeholder IP |
+| --------------- | ----------------- | ---: | --: | --------: | -----------------: | -------------- |
+| `k8s-cp-01`     | k3s control plane |    2 | 3GB |      40GB |               none | `192.168.2.81` |
+| `k8s-worker-01` | k3s worker        |    2 | 3GB |      60GB |              250GB | `192.168.2.82` |
+| `k8s-worker-02` | k3s worker        |    2 | 3GB |      60GB |              250GB | `192.168.2.83` |
+
+The root disks are sized for NixOS and k3s responsibilities. Longhorn storage is allocated as dedicated data disks on the worker Cluster Nodes. The control-plane Cluster Node does not host Longhorn data in the single-Thor phase, keeping control-plane storage participation explicit rather than accidental.
+
+This topology allocates about 660GB of VM disk capacity on Thor's 1TB SSD: 160GB for root disks and 500GB for Longhorn data disks. The remaining space is reserved for Proxmox, templates, logs, snapshots, and operational recovery headroom.
 
 This topology is intentionally not highly available because all nodes initially run on one physical host.
 
@@ -226,7 +230,7 @@ The template must not clone machine identity into cluster nodes. SSH host keys a
    terraform output -json > ../../generated/terraform-outputs.json
    ```
 
-Terraform should create three VMs from the NixOS template with the target CPU, memory, disk, and NIC configuration.
+Terraform should create three VMs from the NixOS template with the target CPU, memory, root disk, Longhorn data disk, and NIC configuration. Only worker Cluster Nodes receive dedicated Longhorn data disks during the single-Thor phase. Those data disks use the `longhorn-data` Proxmox disk serial so NixOS can mount them through the stable `/dev/disk/by-id/virtio-longhorn-data` path.
 
 ### Phase 4: Apply NixOS Node Configuration
 
@@ -255,6 +259,15 @@ nixos-rebuild switch \
 ```
 
 The control-plane node should enable the k3s server role. Worker nodes should enable the k3s agent role and join the control-plane node.
+
+Worker nodes should also mount their dedicated Longhorn data disk at `/var/lib/longhorn`. On first boot after the disk is attached, the NixOS Longhorn data disk module formats the empty disk as ext4 and labels it `longhorn-data`. Confirm the mount before installing or relying on Longhorn:
+
+```sh
+ssh root@192.168.2.82 findmnt /var/lib/longhorn
+ssh root@192.168.2.83 findmnt /var/lib/longhorn
+ssh root@192.168.2.82 ls -l /dev/disk/by-id/virtio-longhorn-data
+ssh root@192.168.2.83 ls -l /dev/disk/by-id/virtio-longhorn-data
+```
 
 The k3s cluster token should be generated once as a strong shared secret and managed with `sops-nix`. The encrypted secret may be committed to git, but decrypted secret material must not be committed. NixOS exposes the `k3s/token` secret to k3s at runtime at `/run/secrets/k3s-token`.
 
@@ -304,6 +317,7 @@ Secret work that must wait until real Cluster Nodes exist:
 5. Confirm the sample app runs.
 6. Expose the sample app through k3s default Traefik/ServiceLB.
 7. Confirm the sample app is reachable from the LAN.
+8. For Longhorn storage validation, follow `docs/longhorn-storage-validation.md`.
 
 ## Operational Safety Checks
 

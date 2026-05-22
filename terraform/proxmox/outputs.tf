@@ -2,10 +2,12 @@ output "cluster_nodes" {
   description = "Declared Hemera Initial Setup Cluster Nodes and their intended management IPs."
   value = {
     for name, node in local.cluster_nodes : name => {
-      vm_id = proxmox_virtual_environment_vm.cluster_node[name].vm_id
-      name  = proxmox_virtual_environment_vm.cluster_node[name].name
-      role  = node.role
-      ip    = node.ip
+      vm_id                 = node.vm_id
+      name                  = name
+      role                  = node.role
+      ip                    = node.ip
+      root_disk_gb          = node.root_disk_gb
+      longhorn_data_disk_gb = node.longhorn_data_disk_gb
     }
   }
 }
