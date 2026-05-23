@@ -11,18 +11,20 @@ sops_file="$repo_root/.sops.yaml"
 ssh_connect_timeout="5"
 dry_run=0
 rekey=0
+rekey_only=0
 ignore_known_hosts=0
 
 usage() {
   cat >&2 <<'USAGE'
-usage: scripts/update-sops-host-recipients [--dry-run] [--rekey] [--ignore-known-hosts]
+usage: scripts/update-sops-host-recipients [--dry-run] [--rekey] [--rekey-only] [--ignore-known-hosts]
 
 Updates the Cluster Node age recipients in .sops.yaml from the nodes' current
 SSH host public keys.
 
 Options:
   --dry-run             Print the recipients that would be written, but do not edit files.
-  --rekey               Run `sops updatekeys -y nix/secrets/*.yaml` after updating .sops.yaml.
+  --rekey               Run `sops updatekeys -y` for all SOPS secret files after updating .sops.yaml.
+  --rekey-only          Rekey all SOPS secret files without checking Cluster Node SSH host keys.
   --ignore-known-hosts  Ignore local known_hosts when reading node host keys.
                         Useful after recreating Cluster Nodes, but weaker than
                         verifying host keys out-of-band.
@@ -42,6 +44,9 @@ while [[ $# -gt 0 ]]; do
   --rekey)
     rekey=1
     ;;
+  --rekey-only)
+    rekey_only=1
+    ;;
   --ignore-known-hosts)
     ignore_known_hosts=1
     ;;
@@ -58,21 +63,58 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-for command in ssh ssh-to-age perl; do
-  if ! command -v "$command" >/dev/null; then
-    echo "missing required command: $command" >&2
-    exit 1
-  fi
-done
+if [[ $dry_run -eq 1 && $rekey_only -eq 1 ]]; then
+  echo "--dry-run cannot be combined with --rekey-only" >&2
+  exit 2
+fi
 
-if [[ $rekey -eq 1 ]] && ! command -v sops >/dev/null; then
-  echo "missing required command for --rekey: sops" >&2
+if [[ $rekey_only -eq 0 ]]; then
+  for command in ssh ssh-to-age perl; do
+    if ! command -v "$command" >/dev/null; then
+      echo "missing required command: $command" >&2
+      exit 1
+    fi
+  done
+fi
+
+if [[ $rekey -eq 1 || $rekey_only -eq 1 ]] && ! command -v sops >/dev/null; then
+  echo "missing required command for rekeying: sops" >&2
   exit 1
 fi
 
 if [[ ! -f $sops_file ]]; then
   echo "missing SOPS config: $sops_file" >&2
   exit 1
+fi
+
+sops_secret_files() {
+  shopt -s nullglob globstar
+  printf '%s\n' \
+    "$repo_root"/nix/secrets/*.yaml \
+    "$repo_root"/k8s/**/*.sops.yaml \
+    "$repo_root"/k8s/**/*.sops.yml
+}
+
+rekey_sops_secret_files() {
+  local secret_files
+  local secret_file
+
+  mapfile -t secret_files < <(sops_secret_files)
+
+  if [[ ${#secret_files[@]} -eq 0 ]]; then
+    echo "no SOPS secret files found under nix/secrets/*.yaml or k8s/**/*.sops.y{a,}ml"
+    return 0
+  fi
+
+  for secret_file in "${secret_files[@]}"; do
+    echo "rekeying ${secret_file#"$repo_root"/}"
+    sops updatekeys -y "$secret_file"
+  done
+}
+
+if [[ $rekey_only -eq 1 ]]; then
+  rekey_sops_secret_files
+  exit 0
 fi
 
 fetch_recipient() {
@@ -129,19 +171,8 @@ fi
 echo "updated $sops_file"
 
 if [[ $rekey -eq 1 ]]; then
-  shopt -s nullglob
-  secret_files=("$repo_root"/nix/secrets/*.yaml)
-
-  if [[ ${#secret_files[@]} -eq 0 ]]; then
-    echo "no secret files found under nix/secrets/*.yaml"
-    exit 0
-  fi
-
-  for secret_file in "${secret_files[@]}"; do
-    echo "rekeying ${secret_file#"$repo_root"/}"
-    sops updatekeys -y "$secret_file"
-  done
+  rekey_sops_secret_files
 else
-  echo "next step: sops updatekeys -y nix/secrets/k3s.yaml"
+  echo "next step: scripts/update-sops-host-recipients --rekey-only"
   echo "or rerun with: scripts/update-sops-host-recipients --rekey"
 fi
