@@ -41,7 +41,6 @@ spec:
               mountPath: /metadata
             - name: audiobooks
               mountPath: /audiobooks
-              readOnly: true
       volumes:
         - name: config
           persistentVolumeClaim:
@@ -53,4 +52,3 @@ spec:
           nfs:
             server: 192.168.2.116
             path: /mnt/Volume/Files/Media/Audiobooks
-            readOnly: true
