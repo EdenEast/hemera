@@ -4,11 +4,7 @@ defaultSettings:
   # useful node-level resilience inside the running k3s cluster. They do not
   # protect against Thor or its SSD failing.
   defaultReplicaCount: 2
-
-  # TrueNAS-backed Longhorn backups are intentionally deferred. Replicas are not
-  # backups, so do not treat Longhorn data as protected from accidental deletion
-  # or physical Thor disk loss until a real backup target is configured later.
-  backupTarget: ""
+  backupTarget: "nfs://192.168.2.116:/mnt/Volume/Files/Backup/hemera/longhorn"
 
 persistence:
   defaultClass: false
