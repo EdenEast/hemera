@@ -118,6 +118,37 @@ kubectl get storageclass longhorn -o yaml
 
 A successful install should create a `longhorn` StorageClass using the configured replica count.
 
+## Frontend access
+
+Longhorn's Helm chart creates the frontend service inside Kubernetes:
+
+```text
+longhorn-system/longhorn-frontend port 80
+```
+
+Hemera exposes that existing service with two private ingress resources:
+
+- `k8s/platform/longhorn/ingress.yaml` for LAN/local DNS access at `longhorn.hemera.local`
+- `k8s/platform/longhorn/tailscale-ingress.yaml` for tailnet access through the Tailscale Kubernetes Operator as `longhorn`
+
+Apply them after Longhorn is installed:
+
+```sh
+kubectl apply -f k8s/platform/longhorn/ingress.yaml
+kubectl apply -f k8s/platform/longhorn/tailscale-ingress.yaml
+```
+
+Validate:
+
+```sh
+kubectl -n longhorn-system get svc longhorn-frontend
+kubectl -n longhorn-system get ingress longhorn longhorn-tailscale
+```
+
+The local DNS hostname `longhorn.hemera.local` must resolve to the k3s ingress/load balancer address from your browser machine. The Tailscale ingress requires the Tailscale Kubernetes Operator from `k8s/platform/tailscale/`.
+
+Treat the Longhorn frontend as an administrative control plane. Keep it private to the LAN or tailnet; do not expose it publicly.
+
 ## PVC smoke test
 
 Create a small test PVC using Longhorn:
