@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+nix develop --no-write-lock-file -c colmena --impure apply --on k8s-cp-01 --no-build-on-target --no-substitute
+
+export KUBECONFIG="${KUBECONFIG:-$PWD/generated/kubeconfig}"
+scripts/get-kubeconfig
+
+kubectl --kubeconfig "$KUBECONFIG" get nodes

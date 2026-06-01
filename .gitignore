@@ -3,3 +3,14 @@ generated/
 result
 result-*
 .direnv/
+
+# Terraform
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/*.tfvars
+!**/*.tfvars.example
+
+# Local kubeconfig
+kubeconfig
+*.kubeconfig

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export KUBECONFIG="${KUBECONFIG:-$PWD/generated/kubeconfig}"
+control_plane="${CONTROL_PLANE_SSH:-admin@192.168.2.81}"
+ssh_user="${SSH_USER:-admin}"
+
+declare -A workers=(
+  [k8s-worker-01]=192.168.2.82
+  [k8s-worker-02]=192.168.2.83
+)
+
+if [[ ! -f "$KUBECONFIG" ]]; then
+  scripts/get-kubeconfig
+fi
+
+for node in "${!workers[@]}"; do
+  ip="${workers[$node]}"
+
+  if kubectl --kubeconfig "$KUBECONFIG" get node "$node" >/dev/null 2>&1; then
+    echo "==> $node already registered; skipping token copy"
+    continue
+  fi
+
+  echo "==> Fetching k3s token from control plane for $node"
+  token="$(ssh "$control_plane" 'sudo cat /var/lib/rancher/k3s/server/node-token')"
+
+  echo "==> Installing token on $node"
+  printf '%s' "$token" | ssh "${ssh_user}@${ip}" \
+    'sudo install -D -m 0400 -o root -g root /dev/stdin /var/lib/rancher/k3s/agent-token'
+
+  echo "==> Applying NixOS config to $node"
+  nix develop --no-write-lock-file -c colmena --impure apply --on "$node" --no-build-on-target --no-substitute
+
+  sleep 1
+
+  echo "==> Waiting for $node to register"
+  kubectl --kubeconfig "$KUBECONFIG" wait --for=condition=Ready "node/$node" --timeout=240s
+done

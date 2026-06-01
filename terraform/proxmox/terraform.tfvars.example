@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars and fill in local values.
+# Never commit terraform.tfvars; it may contain live Proxmox credentials.
+
+proxmox_endpoint = "https://192.168.2.80:8006/"
+# Provider format is usually: USER@REALM!TOKEN_ID=TOKEN_SECRET
+proxmox_api_token = "root@pam!hemera=REPLACE_ME"
+proxmox_insecure  = true
+
+proxmox_node_name            = "pve"
+proxmox_datastore_id         = "local-lvm"
+proxmox_snippet_datastore_id = "local"
+proxmox_bridge               = "vmbr0"
+
+nixos_template_id = 9000
+
+# This should be the local machine user's public key so that the inital cloud-init can connect before it is overridden
+# by the colmena deployment
+admin_ssh_public_key = "ssh-ed25519 REPLACE_ME operator@example"

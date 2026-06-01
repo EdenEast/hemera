@@ -10,7 +10,16 @@
   services.qemuGuest.enable = true;
   services.openssh.enable = true;
 
-  nix.settings.experimental-features = ["nix-command" "flakes"];
+  nix.settings = {
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    trusted-users = [
+      "root"
+      "admin"
+    ];
+  };
 
   users.users.admin = {
     isNormalUser = true;

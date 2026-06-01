@@ -2,29 +2,35 @@ _: {
   perSystem = {
     config,
     pkgs,
+    inputs',
+    lib,
     ...
-  }: {
+  }: let
+    terraformWithDefaultDir = pkgs.writeShellScriptBin "terraform" ''
+      root="$(${pkgs.git}/bin/git -C "$PWD" rev-parse --show-toplevel 2>/dev/null || pwd)"
+      exec ${pkgs.terraform}/bin/terraform -chdir="$root/terraform/proxmox" "$@"
+    '';
+  in {
     devShells.default = pkgs.mkShell {
       name = "hemera";
+      inputsFrom = [config.flake-root.devShell];
       packages = with pkgs; [
-        age
-        colmena
-        curl
-        git
+        terraformWithDefaultDir
+        inputs'.colmena.packages.colmena
         helmfile
-        jq
         just
         k9s
         kubectl
         kubernetes-helm
         kubeseal
-        opentofu
-        sops
         ssh-to-age
-        terraform
-        yq-go
         config.treefmt.build.wrapper
       ];
+
+      shellHook = ''
+        KUBECONFIG="$(${lib.getExe config.flake-root.package})/generated/kubeconfig";
+        export KUBECONFIG
+      '';
     };
   };
 }

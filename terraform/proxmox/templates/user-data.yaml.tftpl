@@ -1,0 +1,14 @@
+#cloud-config
+preserve_hostname: false
+hostname: ${hostname}
+users:
+  - name: admin
+    groups: [wheel]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/sh
+    ssh_authorized_keys:
+      - ${admin_ssh_public_key}
+ssh_pwauth: false
+package_update: false
+runcmd:
+  - [ systemctl, start, qemu-guest-agent.service ]

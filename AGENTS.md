@@ -2,7 +2,8 @@
 
 Do not make any modifications to services running in the cluster unless specifically told to.
 
-Before making changes to any files, show the proposed changes and ask for validation
+Before making changes to any files, show the proposed changes and ask for validation. This does not apply to
+documentation (markdown).
 
 ## Repository Structure
 

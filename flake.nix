@@ -21,6 +21,7 @@
     flake-parts.lib.mkFlake {inherit inputs;} {
       systems = import inputs.systems;
       imports = [
+        inputs.flake-root.flakeModule
         ./nix/flake
         ./nix/packages
       ];

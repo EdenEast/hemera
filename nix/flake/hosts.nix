@@ -27,34 +27,36 @@
 
     deployment = {
       targetHost =
-        (builtins.head config.networking.interfaces.ens18.ipv4.addresses).address;
+        (builtins.head config.networking.interfaces.eth0.ipv4.addresses).address;
       tags =
         ["hemera"]
         ++ lib.optional (lib.hasInfix "cp" name) "control-plane"
         ++ lib.optional (lib.hasInfix "worker" name) "worker";
     };
   };
+
+  colmena =
+    {
+      meta = {
+        nixpkgs = import inputs.nixpkgs {
+          system = "x86_64-linux";
+          config.allowUnfree = true;
+        };
+        specialArgs = {inherit self inputs;};
+      };
+
+      defaults = _: {
+        deployment = {
+          targetUser = "admin";
+          buildOnTarget = false;
+        };
+      };
+    }
+    // lib.genAttrs hostNames mkHive;
 in {
   flake = {
-    colmenaHive =
-      inputs.colmena.lib.makeHive {
-        meta = {
-          nixpkgs = import inputs.nixpkgs {
-            system = "x86_64-linux";
-            config.allowUnfree = true;
-          };
-          specialArgs = {inherit self inputs;};
-        };
-
-        defaults = _: {
-          deployment = {
-            targetUser = "admin";
-            buildOnTarget = false;
-          };
-        };
-      }
-      // lib.genAttrs hostNames mkHive;
-
+    inherit colmena;
+    colmenaHive = inputs.colmena.lib.makeHive colmena;
     nixosConfigurations = inputs.nixpkgs.lib.genAttrs hostNames mkSystem;
   };
 }
