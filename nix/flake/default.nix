@@ -1,4 +1,8 @@
-{inputs, lib, ...}: {
+{
+  inputs,
+  lib,
+  ...
+}: {
   imports = with lib;
     map (fn: ./${fn})
     (builtins.attrNames (

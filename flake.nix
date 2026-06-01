@@ -10,6 +10,11 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    colmena = {
+      url = "github:zhaofengli/colmena";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {flake-parts, ...}:
@@ -17,6 +22,7 @@
       systems = import inputs.systems;
       imports = [
         ./nix/flake
+        ./nix/packages
       ];
     };
 }
