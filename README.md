@@ -1,10 +1,10 @@
 # Hemera
 
-This repository organizes all configuration, scripts, and infrastructure components for my homelab K3s cluster
-environment.
+Hemera is a homelab Kubernetes platform running on personally owned hardware.  This repository organizes all
+configuration, scripts, and infrastructure components for my homelab K3s clusterenvironment.
 
-Hemera is the goddess of day and is the daughter of Nyx the goddess of night which is also my nixos system configuration
-so it is fitting.
+[Hemera](https://en.wikipedia.org/wiki/Hemera) is the goddess of day and is the daughter of [Nyx](https://en.wikipedia.org/wiki/Nyx)
+the goddess of night which is also my [nixos](https://github.com/edeneast/nyx) system configuration so it is fitting.
 
 ## Future Goals
 
