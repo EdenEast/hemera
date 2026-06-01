@@ -1,0 +1,15 @@
+defaultSettings:
+  # Hemera currently runs all Cluster Nodes on Thor, a single Proxmox host with
+  # one 1TB SSD. Two replicas reduce storage overhead while still preserving
+  # useful node-level resilience inside the running k3s cluster. They do not
+  # protect against Thor or its SSD failing.
+  defaultReplicaCount: 2
+
+# Longhorn 1.11 configures backup stores through defaultBackupStore.
+defaultBackupStore:
+  backupTarget: "nfs://192.168.2.116:/mnt/Volume/Files/Backup/hemera/longhorn"
+
+persistence:
+  defaultClass: false
+  defaultClassReplicaCount: 2
+  defaultFsType: ext4

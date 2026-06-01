@@ -22,11 +22,14 @@ _: {
         k9s
         kubectl
         kubernetes-helm
+        kubernetes-helmPlugins.helm-diff
+        helmfile
         kubeseal
         ssh-to-age
         config.treefmt.build.wrapper
       ];
 
+      HELM_PLUGINS = "${pkgs.kubernetes-helmPlugins.helm-diff}";
       shellHook = ''
         KUBECONFIG="$(${lib.getExe config.flake-root.package})/generated/kubeconfig";
         export KUBECONFIG

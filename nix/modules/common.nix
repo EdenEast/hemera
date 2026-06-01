@@ -36,6 +36,8 @@
     };
   };
 
+  services.resolved.enable = true;
+
   services.qemuGuest.enable = true;
 
   services.openiscsi = {
