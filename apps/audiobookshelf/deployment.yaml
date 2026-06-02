@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audiobookshelf
+  namespace: audiobookshelf
+  labels:
+    app.kubernetes.io/name: audiobookshelf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: audiobookshelf
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: audiobookshelf
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 3001
+        runAsGroup: 3000
+        fsGroup: 3000
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: audiobookshelf
+          image: ghcr.io/advplyr/audiobookshelf:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PORT
+              value: "13378"
+          ports:
+            - name: http
+              containerPort: 13378
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /config
+              subPath: config
+            - name: data
+              mountPath: /metadata
+              subPath: metadata
+            - name: audiobooks
+              mountPath: /audiobooks
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: audiobookshelf-data
+        - name: audiobooks
+          nfs:
+            server: 192.168.2.116
+            path: /mnt/Volume/Files/Media/Audiobooks
