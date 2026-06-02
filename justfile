@@ -3,21 +3,6 @@ set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 _default:
     @just --list
 
-tf-init:
-    terraform -chdir=terraform/proxmox init
-
-tf-fmt:
-    terraform -chdir=terraform/proxmox fmt -check
-
-tf-validate:
-    terraform -chdir=terraform/proxmox validate
-
-tf-plan: tf-fmt tf-validate
-    terraform -chdir=terraform/proxmox plan
-
-tf-apply:
-    terraform -chdir=terraform/proxmox apply
-
 template-build:
     nix build .#proxmox-cloud-init-template
 

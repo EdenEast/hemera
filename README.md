@@ -82,9 +82,9 @@ Review the Terraform plan before applying. This creates/replaces Proxmox VMs for
 the target topology.
 
 ```sh
-just tf-init
-just tf-plan
-just tf-apply
+terraform init
+terraform plan
+terraform apply
 ```
 
 ### 5. Bootstrap k3s with Colmena
