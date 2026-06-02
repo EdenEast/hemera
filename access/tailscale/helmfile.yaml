@@ -1,0 +1,9 @@
+repositories:
+  - name: longhorn
+    url: https://pkgs.tailscale.com/helmcharts
+
+releases:
+  - name: tailscale-operator
+    namespace: tailscale
+    createNamespace: true
+    chart: tailscale/tailscale-operator
