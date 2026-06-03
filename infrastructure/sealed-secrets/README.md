@@ -76,3 +76,15 @@ kubectl -n kube-system get secret \
 ```
 
 Store that backup in a password manager or another secure location. Do not commit it.
+
+## Decrypt Sealed secret locally
+
+If you have the backup private key you can use it to decrypt a sealed secret if you lost a password for example to
+connect to a database.
+
+```sh
+kubeseal --recovery-unseal \
+    --recovery-private-key sealed-secrets-private-key.backup.yaml \
+    < apps/<name>/postgres-user.sealed.yaml \
+    -o yaml
+```

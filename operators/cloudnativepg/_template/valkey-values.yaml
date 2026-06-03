@@ -1,0 +1,21 @@
+# Values snippet for charts that expose a Valkey subchart.
+# Keep this snippet in the app directory or merge it into the app's values.yaml.
+# Adjust keys to match the specific chart.
+valkey:
+  enabled: true
+  persistence:
+    data:
+      enabled: true
+      type: persistentVolumeClaim
+      storageClass: longhorn
+      size: 1Gi
+
+# Some charts still call the Redis-compatible dependency `redis`.
+# Use this shape only when the chart expects redis.* values.
+redis:
+  enabled: true
+  master:
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 1Gi

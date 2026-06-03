@@ -1,0 +1,35 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: APP_NAME-postgresql
+  namespace: APP_NAMESPACE
+spec:
+  # Use one instance by default in the current homelab phase.
+  # Increase when the cluster has enough capacity and the app needs higher availability.
+  instances: 1
+
+  # Use a standard CloudNativePG image unless the application requires extensions
+  # or a custom image, as Immich does for vector search.
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+
+  resources:
+    requests:
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  managed:
+    roles:
+      - name: APP_DATABASE_OWNER
+        login: true
+
+  bootstrap:
+    initdb:
+      database: APP_DATABASE
+      owner: APP_DATABASE_OWNER
+      secret:
+        name: APP_POSTGRES_SECRET
+
+  storage:
+    size: 10Gi
+    storageClass: longhorn
