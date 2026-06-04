@@ -10,8 +10,8 @@ documentation (markdown).
 ```
 access/            # Ingress controllers, Authentik, ExternalDNS
 apps/              # Application HelmReleases (jellyfin, n8n, ollama, etc.)
-clusters/          # Flux GitOps definitions (k3s, lab)
-infrastructure/    # Core components (MetalLB, cert-manager, sealed-secrets)
+clusters/          # Cluster definitions (k3s, lab)
+infrastructure/    # Core components (sealed-secrets)
 monitoring/        # Prometheus, Grafana, Loki, Alloy
 nix/               # Nix modules
 operators/         # CloudNativePG, MariaDB, Redis operators
@@ -26,4 +26,3 @@ tools/             # Utility tools
 - Primary cluster: `clusters/k3s/`
 - Main namespace: various per-app
 - Storage class: `longhorn`
-- Ingress: Envoy Gateway (gateway.networking.k8s.io/v1 HTTPRoute)
