@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: send
+  namespace: send
+spec:
+  rules:
+    - host: send.hemera.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: send
+                port:
+                  name: http

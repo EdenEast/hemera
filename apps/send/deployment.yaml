@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: send
+  namespace: send
+  labels:
+    app.kubernetes.io/name: send
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: send
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: send
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: send
+          image: registry.gitlab.com/timvisee/send:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DETECT_BASE_URL
+              value: "true"
+            - name: FILE_DIR
+              value: /uploads
+            - name: REDIS_HOST
+              value: 127.0.0.1
+            - name: PORT
+              value: "1443"
+          ports:
+            - name: http
+              containerPort: 1443
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          volumeMounts:
+            - name: uploads
+              mountPath: /uploads
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          args:
+            - redis-server
+            - --appendonly
+            - "yes"
+            - --dir
+            - /data
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: redis
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: send-uploads
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: send-redis
