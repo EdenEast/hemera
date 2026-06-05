@@ -24,6 +24,6 @@ spec:
     app.kubernetes.io/name: forgejo
   ports:
     - name: ssh
-      port: 22
+      port: 2222
       targetPort: ssh
       protocol: TCP

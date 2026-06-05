@@ -10,6 +10,7 @@
     nodeName = config.networking.hostName;
     extraFlags = [
       "--write-kubeconfig-mode=0644"
+      "--node-taint=node-role.kubernetes.io/control-plane=true:NoSchedule"
     ];
   };
 }

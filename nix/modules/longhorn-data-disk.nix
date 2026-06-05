@@ -68,8 +68,7 @@ in {
     };
 
     fileSystems.${cfg.mountPoint} = {
-      device = cfg.device;
-      fsType = cfg.fsType;
+      inherit (cfg) device fsType;
       noCheck = true;
       options = [
         "nofail"

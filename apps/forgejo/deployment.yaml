@@ -59,7 +59,7 @@ spec:
             - name: FORGEJO__server__START_SSH_SERVER
               value: "true"
             - name: FORGEJO__server__SSH_PORT
-              value: "22"
+              value: "2222"
             - name: FORGEJO__server__SSH_LISTEN_PORT
               value: "2222"
           ports:

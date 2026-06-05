@@ -1,4 +1,6 @@
 defaultSettings:
+  createDefaultDiskLabeledNodes: true
+
   # Hemera currently runs all Cluster Nodes on Thor, a single Proxmox host with
   # one 1TB SSD. Two replicas reduce storage overhead while still preserving
   # useful node-level resilience inside the running k3s cluster. They do not
