@@ -223,18 +223,10 @@ Example order:
 
 ```sh
 kubectl apply -f apps/audiobookshelf/namespace.yaml
-kubectl apply -f apps/audiobookshelf/pvc.yaml
-kubectl apply -f apps/audiobookshelf/service.yaml
-kubectl apply -f apps/audiobookshelf/deployment.yaml
-kubectl apply -f apps/audiobookshelf/ingress.yaml
+kubectl apply -f apps/audiobookshelf/
 
 kubectl apply -f apps/forgejo/namespace.yaml
-kubectl apply -f apps/forgejo/postgres-user.sealed.yaml
-kubectl apply -f apps/forgejo/postgres-cluster.yaml
-kubectl apply -f apps/forgejo/pvc.yaml
-kubectl apply -f apps/forgejo/service.yaml
-kubectl apply -f apps/forgejo/deployment.yaml
-kubectl apply -f apps/forgejo/ingress.yaml
+kubectl apply -f apps/forgejo/
 ```
 
 Validate workloads:
