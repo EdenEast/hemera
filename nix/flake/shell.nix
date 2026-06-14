@@ -21,6 +21,8 @@ _: {
         just
         k9s
         kubectl
+        kustomize
+        argocd
         kubernetes-helm
         kubernetes-helmPlugins.helm-diff
         helmfile
