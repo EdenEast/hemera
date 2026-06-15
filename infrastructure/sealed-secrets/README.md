@@ -4,9 +4,10 @@ Sealed Secrets encrypts Kubernetes Secrets so the encrypted `SealedSecret` manif
 
 ## Install or upgrade
 
+Sealed Secrets is rendered with Kustomize and installed first during Argo CD bootstrap:
+
 ```sh
-export KUBECONFIG=$PWD/generated/kubeconfig
-helmfile -f infrastructure/sealed-secrets/helmfile.yaml apply
+kustomize build --enable-helm infrastructure/sealed-secrets | kubectl apply -f -
 ```
 
 Validate:
@@ -15,6 +16,8 @@ Validate:
 kubectl -n kube-system rollout status deploy/sealed-secrets-controller
 kubectl -n kube-system get pods -l app.kubernetes.io/name=sealed-secrets
 ```
+
+After GitOps Handoff, Argo CD owns this component.
 
 ## Seal a secret
 
@@ -43,7 +46,7 @@ stringData:
 ```
 
 ```sh
-kubeseal --from-file secrets.yaml --format yaml > access/tailscale/operator-oauth.sealed.yaml
+kubeseal --format yaml < secrets.yaml > access/tailscale/operator-oauth.sealed.yaml
 rm secrets.yaml # dont forget to remove the temp secrets file
 ```
 

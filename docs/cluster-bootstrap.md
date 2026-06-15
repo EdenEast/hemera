@@ -10,7 +10,7 @@ This runbook initializes a new Hemera Kubernetes cluster from an empty Proxmox t
 - A Proxmox API token is available, preferably from a password manager rather than committed files.
 - The operator workstation public SSH key is available for First Boot Configuration.
 
-Enter the development shell so `just`, `terraform`, `colmena`, `kubectl`, `helmfile`, and `kubeseal` are available:
+Enter the development shell so `just`, `terraform`, `colmena`, `kubectl`, `kustomize`, `argocd`, `helmfile`, and `kubeseal` are available:
 
 ```sh
 nix develop
@@ -151,85 +151,28 @@ CONTROL_PLANE_SSH=admin@192.168.2.81 just bootstrap-workers
 SSH_USER=admin just bootstrap-workers
 ```
 
-## 6. Install platform components
+## 6. Hand off Cluster Resources to Argo CD
 
-Hemera is currently in a Manual Apply Phase: manifests are organized as future GitOps inputs, but the operator applies them manually.
-
-Install components in dependency order.
-
-### Sealed Secrets
+Hemera now uses Argo CD for the GitOps Managed Phase. After k3s is ready, follow the appropriate Argo CD runbook:
 
 ```sh
-helmfile -f infrastructure/sealed-secrets/helmfile.yaml apply
-kubectl -n kube-system rollout status deploy/sealed-secrets-controller
+$EDITOR docs/argocd-bootstrap.md      # new cluster or recovery bootstrap
+$EDITOR docs/argocd-migration.md      # existing Manual Apply Phase cluster
 ```
 
-If rebuilding a cluster that must decrypt existing committed `SealedSecret` manifests, restore the backed-up Sealed Secrets private key from secure storage and restart the controller:
+At a high level, bootstrap installs Sealed Secrets first, restores or backs up the Sealed Secrets private key, installs Argo CD from Kustomize-rendered Helm chart manifests, applies the GitOps Root Application, and then manually syncs area Applications in wave order.
+
+Validate rendered GitOps inputs before applying them:
 
 ```sh
-kubectl apply -f sealed-secrets-private-key.backup.yaml
-kubectl -n kube-system rollout restart deploy/sealed-secrets-controller
-kubectl -n kube-system rollout status deploy/sealed-secrets-controller
+just gitops-validate
 ```
 
-Do not commit the private key backup. If no backup exists, fetch the new public certificate and reseal each secret before applying workloads:
+After GitOps Handoff, Argo CD owns Cluster Resources such as Sealed Secrets, Argo CD configuration, Longhorn, CloudNativePG, access components, and applications.
 
-```sh
-kubeseal --fetch-cert > infrastructure/sealed-secrets/pub-cert.pem
-```
+## 7. Validate workloads
 
-### Longhorn Storage
-
-```sh
-helmfile -f storage/longhorn/helmfile.yaml apply
-kubectl -n longhorn-system get pods
-kubectl get storageclass longhorn
-```
-
-Apply the optional private Longhorn frontend ingress only after the relevant ingress classes exist:
-
-```sh
-kubectl apply -f storage/longhorn/ingress.yaml
-```
-
-### CloudNativePG
-
-```sh
-helmfile -f operators/cloudnativepg/helmfile.yaml apply
-kubectl get crd clusters.postgresql.cnpg.io
-```
-
-### Access components
-
-Tailscale operator:
-
-```sh
-kubectl apply -f access/tailscale/operator-oauth.sealed.yaml
-helmfile -f access/tailscale/helmfile.yaml apply
-```
-
-Cloudflared:
-
-```sh
-kubectl apply -k access/cloudflared
-kubectl -n cloudflared rollout status deploy/cloudflared
-```
-
-## 7. Apply applications
-
-Apply application manifests after platform dependencies are ready.
-
-Example order:
-
-```sh
-kubectl apply -f apps/audiobookshelf/namespace.yaml
-kubectl apply -f apps/audiobookshelf/
-
-kubectl apply -f apps/forgejo/namespace.yaml
-kubectl apply -f apps/forgejo/
-```
-
-Validate workloads:
+After manually syncing Argo CD Applications, validate workloads:
 
 ```sh
 kubectl get pods -A
