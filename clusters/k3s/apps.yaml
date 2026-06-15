@@ -1,19 +1,29 @@
 apiVersion: argoproj.io/v1alpha1
-kind: Application
+kind: ApplicationSet
 metadata:
   name: hemera-apps
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "4"
 spec:
-  project: default
-  source:
-    repoURL: git@github.com:EdenEast/hemera.git
-    targetRevision: argo-migration
-    path: apps
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: argocd
-  syncPolicy:
-    syncOptions:
-      - Prune=false
+  generators:
+    - git:
+        repoURL: git@github.com:EdenEast/hemera.git
+        revision: argo-migration
+        directories:
+          - path: apps/*
+  template:
+    metadata:
+      name: '{{path.basename}}'
+    spec:
+      project: default
+      source:
+        repoURL: git@github.com:EdenEast/hemera.git
+        targetRevision: argo-migration
+        path: '{{path.path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        syncOptions:
+          - Prune=false

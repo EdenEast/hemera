@@ -11,6 +11,6 @@ Hemera will use Argo CD as its in-cluster GitOps controller because the operator
 - GitOps Components are Kustomize paths; Helm-backed components are rendered through Kustomize rather than Helmfile.
 - Argo CD itself is installed from the Argo CD Helm chart rendered by Kustomize.
 - GitOps Components declare their namespace in local `kustomization.yaml` files and include explicit Namespace manifests when they own the namespace.
-- Hemera starts with area-level Argo CD Applications for repository areas such as `storage/`, `operators/`, `access/`, and `apps/`.
+- Hemera starts with area-level Argo CD Applications for repository areas such as `storage/`, `operators/`, and `access/`; applications under `apps/` are generated as one Argo CD Application per app directory by an ApplicationSet.
 - Argo CD syncs remain manual during the initial migration, and pruning is disabled until the operator explicitly enables it later.
 - Area-level Applications declare sync waves to encode intended reconciliation order even while the operator performs syncs manually.
