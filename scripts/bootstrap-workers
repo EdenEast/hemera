@@ -2,12 +2,13 @@
 set -euo pipefail
 
 export KUBECONFIG="${KUBECONFIG:-$PWD/generated/kubeconfig}"
-control_plane="${CONTROL_PLANE_SSH:-admin@192.168.2.81}"
+control_plane="${CONTROL_PLANE_SSH:-admin@192.168.2.56}"
 ssh_user="${SSH_USER:-admin}"
 
 declare -A workers=(
-  [k8s-worker-01]=192.168.2.82
-  [k8s-worker-02]=192.168.2.83
+  [k8s-worker-01]=192.168.2.55
+  [k8s-worker-02]=192.168.2.57
+  [k8s-worker-03]=192.168.2.59
 )
 
 if [[ ! -f "$KUBECONFIG" ]]; then

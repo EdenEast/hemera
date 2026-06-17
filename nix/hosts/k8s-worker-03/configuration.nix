@@ -8,10 +8,10 @@
   hemera.longhornDataDisk.enable = true;
 
   networking = {
-    hostName = "k8s-worker-01";
+    hostName = "k8s-worker-03";
     interfaces.eth0.ipv4.addresses = [
       {
-        address = "192.168.2.55";
+        address = "192.168.2.59";
         prefixLength = 24;
       }
     ];

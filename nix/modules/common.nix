@@ -63,6 +63,16 @@
   };
   security.sudo.wheelNeedsPassword = false;
 
+  networking = {
+    useDHCP = false;
+    defaultGateway = "192.168.2.1";
+    nameservers = [
+      "192.168.2.1"
+      "1.1.1.1"
+      "9.9.9.9"
+    ];
+  };
+
   environment.systemPackages = with pkgs; [
     curl
     dig

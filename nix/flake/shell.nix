@@ -17,6 +17,7 @@ _: {
       packages = with pkgs; [
         terraformWithDefaultDir
         inputs'.colmena.packages.colmena
+        age
         helmfile
         just
         k9s

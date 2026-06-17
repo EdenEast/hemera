@@ -13,7 +13,7 @@ Recommended usage is to create versioned template IDs/names, for example:
   scripts/register-proxmox-template 9001 nixos-cloudinit-template-v2
 
 Environment:
-  HEMERA_PROXMOX_HOST        SSH target for Proxmox (default: root@192.168.2.80)
+  HEMERA_PROXMOX_HOST        SSH target for Proxmox (default: root@192.168.2.51)
   HEMERA_TEMPLATE_BUILD_ATTR Nix build attr (default: .#proxmox-cloud-init-template)
   HEMERA_TEMPLATE_DUMP_DIR   Remote dump directory (default: /var/lib/vz/dump)
   HEMERA_TEMPLATE_STORAGE    Proxmox restore storage (default: local-lvm)
@@ -35,7 +35,7 @@ if [[ ! $template_id =~ ^[0-9]+$ ]]; then
   exit 2
 fi
 
-proxmox_host="${HEMERA_PROXMOX_HOST:-root@192.168.2.80}"
+proxmox_host="${HEMERA_PROXMOX_HOST:-root@192.168.2.51}"
 build_attr="${HEMERA_TEMPLATE_BUILD_ATTR:-.#proxmox-cloud-init-template}"
 dump_dir="${HEMERA_TEMPLATE_DUMP_DIR:-/var/lib/vz/dump}"
 storage="${HEMERA_TEMPLATE_STORAGE:-local-lvm}"
@@ -49,6 +49,11 @@ archive="$(find -L result -maxdepth 1 -type f -name 'vzdump-qemu-*.vma.zst' -pri
 if [[ -z $archive ]]; then
   echo "could not find result/vzdump-qemu-*.vma.zst after build" >&2
   exit 1
+fi
+
+if command -v zstd >/dev/null 2>&1; then
+  echo "==> Validating local archive: $archive"
+  zstd -t "$archive"
 fi
 
 archive_name="$(basename "$archive")"
@@ -77,15 +82,31 @@ storage="$4"
 bridge="$5"
 replace="$6"
 
+free_stale_template_volumes() {
+  local volumes
+  volumes="$({ pvesm list "$storage" 2>/dev/null || true; } | awk -v id="$template_id" '$1 ~ "(^|:)(vm|base)-" id "-" {print $1}')"
+  if [[ -n "$volumes" ]]; then
+    echo "==> Removing stale volumes for template ID $template_id on storage $storage"
+    while IFS= read -r volume; do
+      [[ -z "$volume" ]] && continue
+      echo "    freeing $volume"
+      pvesm free "$volume" || true
+    done <<<"$volumes"
+  fi
+}
+
 if qm status "$template_id" >/dev/null 2>&1; then
   if [[ "$replace" == "1" ]]; then
     echo "==> Existing VM/template $template_id found; destroying because HEMERA_TEMPLATE_REPLACE=1"
     qm stop "$template_id" >/dev/null 2>&1 || true
-    qm destroy "$template_id" --purge true
+    qm destroy "$template_id" --purge true --destroy-unreferenced-disks 1 || true
+    free_stale_template_volumes
   else
     echo "VM/template ID $template_id already exists. Use a new versioned ID or set HEMERA_TEMPLATE_REPLACE=1." >&2
     exit 1
   fi
+else
+  free_stale_template_volumes
 fi
 
 qmrestore "$remote_archive" "$template_id" --storage "$storage" --unique true
@@ -95,16 +116,24 @@ qm set "$template_id" \
   --net0 "virtio,bridge=$bridge" \
   --boot order=virtio0
 qm template "$template_id"
-qm config "$template_id"
+
+config="$(qm config "$template_id")"
+printf '%s\n' "$config"
+
+echo "==> Validating restored template $template_id"
+grep -q '^template: 1$' <<<"$config" || { echo "template flag missing after restore" >&2; exit 1; }
+grep -q '^boot: order=virtio0$' <<<"$config" || { echo "boot order is not virtio0" >&2; exit 1; }
+grep -q '^virtio0:' <<<"$config" || { echo "boot disk virtio0 missing" >&2; exit 1; }
+grep -q '^net0:' <<<"$config" || { echo "network device net0 missing" >&2; exit 1; }
 REMOTE
 
 cat <<EOF
 
-Template registered successfully.
+Template registered and validated successfully.
 
 Update local Terraform if this is the template you want new Cluster Nodes to use:
 
-  terraform/proxmox/terraform.tfvars
+  terraform/proxmox-stage-a/terraform.tfvars
     nixos_template_id = $template_id
 
 EOF
