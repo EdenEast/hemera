@@ -134,6 +134,13 @@ resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
       admin_ssh_public_key = var.admin_ssh_public_key
     })
   }
+
+  lifecycle {
+    # Cloud-init snippets are first-boot inputs. Imported snippets do not expose
+    # source_raw back into state, so do not replace live-node snippets merely
+    # because local Terraform state was reconstructed.
+    ignore_changes = [overwrite, source_raw, timeout_upload, upload_mode]
+  }
 }
 
 resource "proxmox_virtual_environment_vm" "cluster_node" {
