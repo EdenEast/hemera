@@ -18,9 +18,11 @@ _: {
         terraformWithDefaultDir
         inputs'.colmena.packages.colmena
         age
+        fluxcd
         helmfile
         just
         k9s
+        kustomize
         kubectl
         kubernetes-helm
         kubernetes-helmPlugins.helm-diff

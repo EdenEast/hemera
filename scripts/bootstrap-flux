@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+flux bootstrap git \
+  --url=ssh://git@github.com/EdenEast/hemera.git \
+  --branch=main \
+  --path=clusters/k3s

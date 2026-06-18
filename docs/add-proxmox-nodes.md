@@ -2,15 +2,15 @@
 
 ## Purpose
 
-This SOP describes how to add a new Proxmox VE host to the Hemera Proxmox cluster and complete the required post-join setup for Kubernetes VM hosting.
+This SOP describes how to add a new Proxmox VE host to the Hemera Proxmox cluster and prepare it for Kubernetes VM hosting.
 
 It covers:
 
 - Proxmox host installation and network identity
 - Joining the Proxmox cluster
 - Storage setup
-- HA Kubernetes API VIP proxy setup with HAProxy and Keepalived
 - Terraform/Nix integration checks
+- kube-vip validation for the Kubernetes API VIP
 - Validation and rollback
 
 ## Current cluster constants
@@ -21,12 +21,11 @@ It covers:
 | LAN gateway | `192.168.2.1` |
 | Kubernetes API VIP | `192.168.2.50` |
 | VIP listener | `192.168.2.50:6443` |
-| Keepalived VRID | `50` |
-| Keepalived auth pass | `hemera50` |
+| VIP implementation | `kube-vip` DaemonSet in `kube-system` |
 | Existing Proxmox node 1 | `node-01` / `192.168.2.51` |
 | Existing Proxmox node 2 | `node-02` / `192.168.2.52` |
 | Existing Proxmox node 3 | `node-03` / `192.168.2.53` |
-| Current K3s API backends | `192.168.2.81`, `192.168.2.56`, `192.168.2.58` |
+| Current K3s control planes | `k8s-cp-01`, `k8s-cp-02`, `k8s-cp-03` |
 | NixOS template VM ID | `9000` on `node-01` |
 
 ## Required inputs
@@ -37,29 +36,17 @@ Before starting, choose and record:
 |---|---:|---:|
 | New Proxmox hostname | `node-04` |  |
 | New Proxmox management IP | `192.168.2.54` |  |
-| Keepalived router ID | `NODE_04` |  |
-| Keepalived priority | `90` |  |
 | Proxmox root disk | `/dev/nvme0n1` |  |
 | Longhorn storage disk | `/dev/sdb` |  |
 | Longhorn storage ID | `longhorn-lvm` |  |
-
-Keepalived priorities should be unique. Use lower priorities for newer or less preferred hosts. Current priorities:
-
-| Host | Priority |
-|---|---:|
-| `node-01` | `120` |
-| `node-02` | `110` |
-| `node-03` | `100` |
-
-For `node-04`, use `90` unless there is a reason to prefer it over an existing host.
 
 ## Safety rules
 
 1. Do not change running Kubernetes workloads during Proxmox host onboarding unless explicitly required.
 2. Do not run a blind Terraform apply after changing Proxmox cluster membership.
 3. Do not duplicate VM/template ID `9000` on another Proxmox node unless the template strategy has intentionally changed.
-4. Do not add a new HAProxy backend until the target K3s control-plane VM exists and is healthy.
-5. Only one Proxmox host should own `192.168.2.50` at a time.
+4. Do not create a separate Proxmox-hosted Kubernetes API VIP. Hemera uses kube-vip inside the Kubernetes cluster.
+5. Only one control-plane Cluster Node should own `192.168.2.50` at a time.
 
 ---
 
@@ -95,19 +82,28 @@ Expected:
 - All expected Kubernetes nodes are `Ready`.
 - VIP API works.
 
-### 1.3 Confirm VIP ownership
+### 1.3 Confirm kube-vip health
 
 ```bash
-for host in 192.168.2.51 192.168.2.52 192.168.2.53; do
+kubectl -n kube-system get daemonset kube-vip-ds
+kubectl -n kube-system get pods -l app.kubernetes.io/name=kube-vip -o wide
+kubectl -n kube-system logs daemonset/kube-vip-ds --tail=50
+```
+
+To identify the current VIP owner, check the control-plane Cluster Nodes:
+
+```bash
+for host in 192.168.2.54 192.168.2.56 192.168.2.58; do
   echo "=== $host ==="
-  ssh root@$host 'hostname; systemctl is-active haproxy keepalived; ip addr show vmbr0 | grep 192.168.2.50 || true'
+  ssh admin@$host 'hostname; ip addr show eth0 | grep 192.168.2.50 || true'
 done
 ```
 
 Expected:
 
-- `haproxy` and `keepalived` are active on all participating Proxmox hosts.
-- Exactly one host shows `192.168.2.50/24` on `vmbr0`.
+- `kube-vip-ds` is available.
+- kube-vip pods are running on control-plane Cluster Nodes.
+- Exactly one control-plane Cluster Node shows `192.168.2.50/24` on `eth0`.
 
 ---
 
@@ -126,8 +122,6 @@ During installation configure:
 
 ### 2.2 Confirm network identity
 
-From your workstation:
-
 ```bash
 ping -c 3 192.168.2.54
 ssh root@192.168.2.54 'hostname; ip -br addr; ip route'
@@ -139,9 +133,9 @@ Expected:
 - `vmbr0` has the planned static IP.
 - Default route uses `192.168.2.1`.
 
-### 2.3 Post install proxmox setup
+### 2.3 Post-install Proxmox setup
 
-After install run [PVE Post Install](https://community-scripts.org/scripts/post-pve-install?from=scripts&fromQ=post+install+&fromFilter=popular) script to remove enterprise repositories and nags
+After install, run the [PVE Post Install](https://community-scripts.org/scripts/post-pve-install?from=scripts&fromQ=post+install+&fromFilter=popular) script if desired to remove enterprise repositories and nags.
 
 ### 2.4 Update host resolution on all Proxmox nodes
 
@@ -169,15 +163,11 @@ done
 
 ## Phase 3: Join the Proxmox cluster
 
-### 3.1 Get the cluster join command from an existing node
-
-On an existing cluster node:
+### 3.1 Confirm existing cluster quorum
 
 ```bash
 ssh root@192.168.2.51 'pvecm status'
 ```
-
-Confirm quorum is healthy before continuing.
 
 ### 3.2 Join from the new node
 
@@ -225,18 +215,16 @@ If `local-lvm` is missing, stop and fix the Proxmox installation/storage layout 
 
 ### 4.3 Create Longhorn LVM storage if this node will host Longhorn workers
 
-> Skip this section for control-plane-only Proxmox hosts.
+Skip this section for control-plane-only Proxmox hosts.
 
 Identify the dedicated Longhorn disk. Example: `/dev/sdb`.
-
-Create a physical volume, volume group, and Proxmox LVM-thin storage:
 
 ```bash
 ssh root@192.168.2.54 '
   pvcreate /dev/sdb
-  vgcreate longhorn-vg /dev/sdb
-  lvcreate -l 100%FREE -T longhorn-vg/longhorn-thin
-  pvesm add lvmthin longhorn-lvm --vgname longhorn-vg --thinpool longhorn-thin --content images,rootdir
+  vgcreate vg-longhorn /dev/sdb
+  lvcreate -l 100%FREE -T vg-longhorn/longhorn
+  pvesm add lvmthin longhorn-lvm --vgname vg-longhorn --thinpool longhorn --content images,rootdir
   pvesm status
 '
 ```
@@ -249,192 +237,9 @@ If Terraform manages this storage for the host, make sure the Terraform resource
 
 ---
 
-## Phase 5: Install HA Kubernetes API VIP proxy components
+## Phase 5: Template and VM placement setup
 
-Do this if the new Proxmox host should participate in API VIP failover.
-
-### 5.1 Install packages
-
-```bash
-ssh root@192.168.2.54 'apt update && apt install -y haproxy keepalived'
-```
-
-### 5.2 Allow HAProxy to bind the VIP when not currently master
-
-```bash
-ssh root@192.168.2.54 'echo net.ipv4.ip_nonlocal_bind=1 >/etc/sysctl.d/99-k8s-api-vip.conf && sysctl --system'
-```
-
-Validate:
-
-```bash
-ssh root@192.168.2.54 'sysctl net.ipv4.ip_nonlocal_bind'
-```
-
-Expected:
-
-```text
-net.ipv4.ip_nonlocal_bind = 1
-```
-
-### 5.3 Configure HAProxy
-
-Write `/etc/haproxy/haproxy.cfg` on the new node:
-
-```bash
-ssh root@192.168.2.54 "cat >/etc/haproxy/haproxy.cfg <<'EOF'
-global
-  log /dev/log local0
-  log /dev/log local1 notice
-
-defaults
-  log global
-  mode tcp
-  option tcplog
-  timeout connect 5s
-  timeout client  1m
-  timeout server  1m
-
-frontend k8s_api
-  bind 192.168.2.50:6443
-  default_backend k8s_api_backends
-
-backend k8s_api_backends
-  option tcp-check
-  server k8s-cp-01 192.168.2.81:6443 check
-  server k8s-cp-02 192.168.2.56:6443 check
-  server k8s-cp-03 192.168.2.58:6443 check
-EOF
-haproxy -c -f /etc/haproxy/haproxy.cfg
-systemctl enable --now haproxy
-systemctl restart haproxy
-systemctl is-active haproxy
-"
-```
-
-Expected:
-
-- `haproxy -c` reports valid config.
-- `haproxy` is active.
-
-### 5.4 Configure Keepalived
-
-Set these values for the new node:
-
-```bash
-NEW_NODE_IP=192.168.2.54
-ROUTER_ID=NODE_04
-PRIORITY=90
-```
-
-Write config:
-
-```bash
-ssh root@$NEW_NODE_IP "cat >/etc/keepalived/keepalived.conf <<EOF
-global_defs {
-  router_id ${ROUTER_ID}
-}
-
-vrrp_script chk_haproxy {
-  script \"pidof haproxy\"
-  interval 2
-  fall 2
-  rise 2
-  weight -20
-}
-
-vrrp_instance VI_K8S_API {
-  state BACKUP
-  interface vmbr0
-  virtual_router_id 50
-  priority ${PRIORITY}
-  advert_int 1
-
-  authentication {
-    auth_type PASS
-    auth_pass hemera50
-  }
-
-  virtual_ipaddress {
-    192.168.2.50/24 dev vmbr0
-  }
-
-  track_script {
-    chk_haproxy
-  }
-}
-EOF
-systemctl enable --now keepalived
-systemctl restart keepalived
-systemctl is-active keepalived
-"
-```
-
-### 5.5 Validate VIP state
-
-```bash
-for host in 192.168.2.51 192.168.2.52 192.168.2.53 192.168.2.54; do
-  echo "=== $host ==="
-  ssh root@$host 'hostname; systemctl is-active haproxy keepalived; ip addr show vmbr0 | grep 192.168.2.50 || true'
-done
-
-ping -c 3 192.168.2.50
-kubectl --server=https://192.168.2.50:6443 get nodes -o wide
-```
-
-Expected:
-
-- Exactly one Proxmox host owns `192.168.2.50/24`.
-- VIP API works.
-
----
-
-## Phase 6: Optional VIP failover test
-
-Only run this during a maintenance window or while actively supervising the cluster.
-
-### 6.1 Identify current VIP owner
-
-```bash
-for host in 192.168.2.51 192.168.2.52 192.168.2.53 192.168.2.54; do
-  ssh root@$host 'hostname; ip addr show vmbr0 | grep 192.168.2.50 || true'
-done
-```
-
-### 6.2 Stop Keepalived on current owner
-
-Replace `CURRENT_OWNER_IP` with the node currently holding the VIP:
-
-```bash
-ssh root@CURRENT_OWNER_IP 'systemctl stop keepalived'
-```
-
-### 6.3 Confirm failover
-
-```bash
-for host in 192.168.2.51 192.168.2.52 192.168.2.53 192.168.2.54; do
-  ssh root@$host 'hostname; ip addr show vmbr0 | grep 192.168.2.50 || true'
-done
-
-kubectl --server=https://192.168.2.50:6443 get nodes
-```
-
-Expected:
-
-- Another host owns `192.168.2.50`.
-- Kubernetes API remains reachable.
-
-### 6.4 Restore original node
-
-```bash
-ssh root@CURRENT_OWNER_IP 'systemctl start keepalived'
-```
-
----
-
-## Phase 7: Template and VM placement setup
-
-### 7.1 Confirm template strategy
+### 5.1 Confirm template strategy
 
 Current template strategy:
 
@@ -454,7 +259,7 @@ Expected:
 - `node-01` has template `9000`.
 - The new node does not have a conflicting local VM/template ID `9000`.
 
-### 7.2 Validate VM networking on new node
+### 5.2 Validate VM networking on new node
 
 ```bash
 ssh root@192.168.2.54 'ip -br link show vmbr0; bridge link || true'
@@ -467,29 +272,22 @@ Expected:
 
 ---
 
-## Phase 8: Terraform integration
+## Phase 6: Terraform integration
 
-### 8.1 Update Terraform variables if needed
+### 6.1 Update Terraform node inventory
 
-If Terraform needs to SSH to the new Proxmox node for snippets or VM creation, add a variable for the new node address in `terraform/proxmox` as required by the Terraform module design.
+If Terraform needs to create VMs on the new Proxmox node, add the node to the Proxmox provider SSH node list and to any placement maps in `terraform/proxmox/main.tf`.
 
-Example local value:
-
-```hcl
-proxmox_node_04_address = "192.168.2.54"
-```
-
-### 8.2 Add the new node to VM placement maps
-
-When adding VMs that should run on the new node, update the relevant Terraform map with:
+Record for each new VM:
 
 - Proxmox node name, e.g. `node-04`
 - VM ID
 - VM IP
+- role: `control-plane` or `worker`
 - root datastore, usually `local-lvm`
 - Longhorn datastore, usually `longhorn-lvm` for workers
 
-Review before applying:
+### 6.2 Review Terraform safely
 
 ```bash
 terraform -chdir=terraform/proxmox fmt -check
@@ -501,11 +299,11 @@ Do not apply if Terraform wants to destroy or recreate existing VMs unexpectedly
 
 ---
 
-## Phase 9: Nix/Kubernetes integration for new VMs
+## Phase 7: Nix/Kubernetes integration for new VMs
 
 This phase is only needed after Terraform creates new Kubernetes VMs on the Proxmox node.
 
-### 9.1 Add Nix host definitions
+### 7.1 Add Nix host definitions
 
 Create or update host files under:
 
@@ -534,9 +332,7 @@ Workers with dedicated Longhorn disks should include:
 hemera.longhornDataDisk.enable = true;
 ```
 
-### 9.2 Verify IPs before applying
-
-Before running Colmena, verify the target host IP in Nix matches the actual VM:
+### 7.2 Verify IPs before applying
 
 ```bash
 rg -n 'hostName|address = ' nix/hosts/<hostname>/configuration.nix
@@ -550,14 +346,14 @@ For Longhorn workers, expected disk:
 /dev/disk/by-id/virtio-longhorn-data
 ```
 
-### 9.3 Deploy with Colmena
+### 7.3 Deploy with Colmena
 
 ```bash
 export HEMERA_AGE_KEY=/home/eden/c/hemera/keys.txt
 nix run github:zhaofengli/colmena -- apply --on <hostname>
 ```
 
-### 9.4 Validate Kubernetes node
+### 7.4 Validate Kubernetes node
 
 ```bash
 kubectl get nodes -o wide
@@ -571,13 +367,18 @@ ssh admin@<vm-ip> 'findmnt /var/lib/longhorn; lsblk -f'
 kubectl get pods -n longhorn-system -o wide | grep <hostname>
 ```
 
+For control-plane nodes, kube-vip should automatically schedule on the node after it has the `node-role.kubernetes.io/control-plane` label:
+
+```bash
+kubectl -n kube-system get pods -l app.kubernetes.io/name=kube-vip -o wide
+kubectl --server=https://192.168.2.50:6443 get nodes -o wide
+```
+
 ---
 
-## Phase 10: Final validation checklist
+## Phase 8: Final validation checklist
 
-Run all checks before declaring the node ready.
-
-### 10.1 Proxmox checks
+### 8.1 Proxmox checks
 
 ```bash
 ssh root@192.168.2.54 'hostname; pvecm status; pvesm status; qm list'
@@ -589,25 +390,20 @@ Expected:
 - Cluster is quorate.
 - Storage is healthy.
 
-### 10.2 VIP checks
+### 8.2 kube-vip checks
 
 ```bash
-for host in 192.168.2.51 192.168.2.52 192.168.2.53 192.168.2.54; do
-  echo "=== $host ==="
-  ssh root@$host 'hostname; systemctl is-active haproxy keepalived; ip addr show vmbr0 | grep 192.168.2.50 || true; grep -E "server k8s-cp" /etc/haproxy/haproxy.cfg'
-done
-
+kubectl -n kube-system get daemonset kube-vip-ds
+kubectl -n kube-system get pods -l app.kubernetes.io/name=kube-vip -o wide
 kubectl --server=https://192.168.2.50:6443 get nodes -o wide
 ```
 
 Expected:
 
-- HAProxy/Keepalived active on VIP participants.
-- Exactly one VIP owner.
-- HAProxy backend list is current.
-- Kubernetes API works through VIP.
+- kube-vip pods are healthy on control-plane Cluster Nodes.
+- The Kubernetes API works through `192.168.2.50:6443`.
 
-### 10.3 Kubernetes checks
+### 8.3 Kubernetes checks
 
 ```bash
 kubectl get nodes -o wide
@@ -635,19 +431,21 @@ journalctl -u corosync -u pve-cluster --no-pager -n 200
 
 If the node partially joined and must be removed, follow Proxmox cluster removal procedures from a healthy existing node. Do not remove a node from a non-quorate cluster without a recovery plan.
 
-### If VIP breaks
+### If kube-vip or the API VIP breaks
 
-1. Stop Keepalived on the new node:
+1. Check kube-vip pods and logs:
 
 ```bash
-ssh root@192.168.2.54 'systemctl stop keepalived'
+kubectl -n kube-system get pods -l app.kubernetes.io/name=kube-vip -o wide
+kubectl -n kube-system logs daemonset/kube-vip-ds --tail=100
 ```
 
-2. Confirm an existing node owns the VIP:
+2. Confirm whether any control-plane node owns the VIP:
 
 ```bash
-for host in 192.168.2.51 192.168.2.52 192.168.2.53; do
-  ssh root@$host 'hostname; ip addr show vmbr0 | grep 192.168.2.50 || true'
+for host in 192.168.2.54 192.168.2.56 192.168.2.58; do
+  echo "=== $host ==="
+  ssh admin@$host 'hostname; ip addr show eth0 | grep 192.168.2.50 || true'
 done
 ```
 
@@ -655,6 +453,14 @@ done
 
 ```bash
 kubectl --server=https://192.168.2.50:6443 get nodes
+```
+
+If the VIP is unavailable but a control-plane node is reachable, temporarily fetch a kubeconfig that points directly at that node while repairing kube-vip:
+
+```bash
+CONTROL_PLANE_IP=<control-plane-ip> \
+KUBE_API_ENDPOINT=https://<control-plane-ip>:6443 \
+just kubeconfig
 ```
 
 ### If Terraform plan is unsafe

@@ -4,11 +4,12 @@ This runbook initializes a new Hemera Kubernetes cluster from an empty Proxmox t
 
 ## Prerequisites
 
-- Thor is installed with Proxmox and reachable at `192.168.2.80`.
-- The operator workstation can SSH to Thor as `root` without relying on a local SSH alias.
+- Proxmox nodes are installed and reachable at `192.168.2.51`, `192.168.2.52`, and `192.168.2.53`.
+- The operator workstation can SSH to each Proxmox node as `root` without relying on a local SSH alias.
 - Nix flakes are available locally.
 - A Proxmox API token is available, preferably from a password manager rather than committed files.
 - The operator workstation public SSH key is available for First Boot Configuration.
+- The Flux CLI is available for GitOps bootstrap.
 
 Enter the development shell so `just`, `terraform`, `colmena`, `kubectl`, `helmfile`, and `kubeseal` are available:
 
@@ -23,19 +24,23 @@ The development shell sets `KUBECONFIG` to `generated/kubeconfig`.
 Enable Proxmox snippets on the storage used for cloud-init user data. Terraform uploads First Boot Configuration snippets over SSH.
 
 ```sh
-ssh root@192.168.2.80 'pvesm set local --content backup,iso,vztmpl,snippets,import'
+for host in 192.168.2.51 192.168.2.52 192.168.2.53; do
+  ssh root@$host 'pvesm set local --content backup,iso,vztmpl,snippets,import'
+done
 ```
 
 Confirm SSH works directly:
 
 ```sh
 ssh-add -L
-ssh root@192.168.2.80 true
+for host in 192.168.2.51 192.168.2.52 192.168.2.53; do
+  ssh root@$host true
+done
 ```
 
 ## 2. Register a NixOS cloud-init template
 
-Build the NixOS Proxmox image, upload it to Thor, restore it as a VM, and convert that VM to a Proxmox template:
+Build the NixOS Proxmox image, upload it to `node-01`, restore it as a VM, and convert that VM to a Proxmox template:
 
 ```sh
 just template-register 9000 nixos-cloudinit-template-v1
@@ -66,12 +71,12 @@ cp terraform/proxmox/terraform.tfvars.example terraform/proxmox/terraform.tfvars
 Fill in local values in `terraform/proxmox/terraform.tfvars`. At minimum set:
 
 ```hcl
-proxmox_endpoint      = "https://192.168.2.80:8006/"
-proxmox_node_name     = "pve"
-proxmox_node_address  = "192.168.2.80"
-proxmox_datastore_id  = "local-lvm"
-nixos_template_id     = 9000
-admin_ssh_public_key  = "ssh-ed25519 ..."
+proxmox_endpoint             = "https://192.168.2.51:8006/"
+proxmox_snippet_datastore_id = "local"
+proxmox_bridge               = "vmbr0"
+template_source_node         = "node-01"
+nixos_template_id            = 9000
+admin_ssh_public_key         = "ssh-ed25519 ..."
 ```
 
 Keep Proxmox credentials out of git. Prefer exporting the token from a password manager:
@@ -98,16 +103,19 @@ Current Terraform topology:
 
 | Cluster Node | Role | IP | VM ID |
 | --- | --- | --- | --- |
-| `k8s-cp-01` | Control Plane Node | `192.168.2.81` | `501` |
-| `k8s-worker-01` | Worker Node | `192.168.2.82` | `511` |
-| `k8s-worker-02` | Worker Node | `192.168.2.83` | `512` |
+| `k8s-cp-01` | Control Plane Node | `192.168.2.54` | `501` |
+| `k8s-worker-01` | Worker Node | `192.168.2.55` | `511` |
+| `k8s-cp-02` | Control Plane Node | `192.168.2.56` | `502` |
+| `k8s-worker-02` | Worker Node | `192.168.2.57` | `512` |
+| `k8s-cp-03` | Control Plane Node | `192.168.2.58` | `503` |
+| `k8s-worker-03` | Worker Node | `192.168.2.59` | `513` |
 
 After Terraform finishes, verify SSH reachability:
 
 ```sh
-ssh admin@192.168.2.81 true
-ssh admin@192.168.2.82 true
-ssh admin@192.168.2.83 true
+for host in 192.168.2.54 192.168.2.55 192.168.2.56 192.168.2.57 192.168.2.58 192.168.2.59; do
+  ssh admin@$host true
+done
 ```
 
 ## 5. Bootstrap k3s with Colmena
@@ -146,96 +154,74 @@ just kubeconfig
 Useful overrides:
 
 ```sh
-CONTROL_PLANE_IP=192.168.2.81 just kubeconfig
-CONTROL_PLANE_SSH=admin@192.168.2.81 just bootstrap-workers
+CONTROL_PLANE_IP=192.168.2.54 just kubeconfig
+CONTROL_PLANE_SSH=admin@192.168.2.54 just bootstrap-workers
 SSH_USER=admin just bootstrap-workers
 ```
 
-## 6. Install platform components
+## 6. Bootstrap Flux GitOps
 
-Hemera is currently in a Manual Apply Phase: manifests are organized as future GitOps inputs, but the operator applies them manually.
+Hemera uses Flux CD to reconcile Kubernetes resources from this repository. If rebuilding a cluster that must reuse existing sealed secrets, restore the Sealed Secrets private key before bootstrapping Flux. The private key backup is operator-managed and must not be committed to this repository.
 
-Install components in dependency order.
-
-### Sealed Secrets
+After the cluster is reachable, bootstrap Flux against the Git remote for this repo:
 
 ```sh
-helmfile -f infrastructure/sealed-secrets/helmfile.yaml apply
-kubectl -n kube-system rollout status deploy/sealed-secrets-controller
+scripts/bootstrap-flux
 ```
 
-If rebuilding a cluster that must decrypt existing committed `SealedSecret` manifests, restore the backed-up Sealed Secrets private key from secure storage and restart the controller:
+Flux creates `clusters/k3s/flux-system/` during bootstrap and then reconciles the cluster entrypoint in `clusters/k3s/`.
 
-```sh
-kubectl apply -f sealed-secrets-private-key.backup.yaml
-kubectl -n kube-system rollout restart deploy/sealed-secrets-controller
-kubectl -n kube-system rollout status deploy/sealed-secrets-controller
+Reconciliation dependencies:
+
+```text
+infrastructure -> operators
+infrastructure -> storage
+infrastructure -> access
+operators + storage + access -> apps
+operators + storage + access -> monitoring
 ```
 
-Do not commit the private key backup. If no backup exists, fetch the new public certificate and reseal each secret before applying workloads:
+Validate Flux:
 
 ```sh
-kubeseal --fetch-cert > infrastructure/sealed-secrets/pub-cert.pem
-```
-
-### Longhorn Storage
-
-```sh
-helmfile -f storage/longhorn/helmfile.yaml apply
-kubectl -n longhorn-system get pods
-kubectl get storageclass longhorn
-```
-
-Apply the optional private Longhorn frontend ingress only after the relevant ingress classes exist:
-
-```sh
-kubectl apply -f storage/longhorn/ingress.yaml
-```
-
-### CloudNativePG
-
-```sh
-helmfile -f operators/cloudnativepg/helmfile.yaml apply
-kubectl get crd clusters.postgresql.cnpg.io
-```
-
-### Access components
-
-Tailscale operator:
-
-```sh
-kubectl apply -f access/tailscale/operator-oauth.sealed.yaml
-helmfile -f access/tailscale/helmfile.yaml apply
-```
-
-Cloudflared:
-
-```sh
-kubectl apply -k access/cloudflared
-kubectl -n cloudflared rollout status deploy/cloudflared
-```
-
-## 7. Apply applications
-
-Apply application manifests after platform dependencies are ready.
-
-Example order:
-
-```sh
-kubectl apply -f apps/audiobookshelf/namespace.yaml
-kubectl apply -f apps/audiobookshelf/
-
-kubectl apply -f apps/forgejo/namespace.yaml
-kubectl apply -f apps/forgejo/
-```
-
-Validate workloads:
-
-```sh
+flux get kustomizations
+flux get sources git
+flux get sources helm -A
+flux get helmreleases -A
 kubectl get pods -A
-kubectl get pvc -A
-kubectl get ingress -A
 ```
+
+See [`docs/flux-gitops.md`](flux-gitops.md) for the operating model.
+
+### kube-vip
+
+Hemera uses kube-vip for the Kubernetes API VIP at `192.168.2.50:6443`. Flux manages the kube-vip manifest from `access/kube-vip/`.
+
+Validate:
+
+```sh
+kubectl -n kube-system get daemonset kube-vip-ds
+kubectl -n kube-system get pods -l app.kubernetes.io/name=kube-vip -o wide
+kubectl --server=https://192.168.2.50:6443 get nodes -o wide
+```
+
+If rebuilding from scratch and the VIP is not available yet, use a kubeconfig that points directly at a reachable Control Plane Node while bootstrapping Flux:
+
+```sh
+CONTROL_PLANE_IP=192.168.2.54 \
+KUBE_API_ENDPOINT=https://192.168.2.54:6443 \
+just kubeconfig
+```
+
+After kube-vip is healthy, refresh the normal VIP-based kubeconfig:
+
+```sh
+just kubeconfig
+```
+
+### Manual fallback
+
+Existing Helmfile and raw manifest commands remain available as a temporary fallback during the Flux migration, but Flux should be the normal source of truth once bootstrap succeeds.
 
 ## Recovery notes
 

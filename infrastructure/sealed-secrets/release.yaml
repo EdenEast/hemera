@@ -1,0 +1,22 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sealed-secrets-controller
+  namespace: kube-system
+spec:
+  interval: 10m0s
+  chart:
+    spec:
+      chart: sealed-secrets
+      version: 2.18.6
+      sourceRef:
+        kind: HelmRepository
+        name: sealed-secrets
+        namespace: kube-system
+  install:
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
