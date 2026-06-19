@@ -1,6 +1,6 @@
 repositories:
   - name: sealed-secrets
-    url: https://bitnami-labs.github.io/sealed-secrets
+    url: https://bitnami.github.io/sealed-secrets
 
 releases:
   - name: sealed-secrets-controller
