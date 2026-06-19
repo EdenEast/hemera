@@ -1,0 +1,36 @@
+---
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: ingress-ha
+spec:
+  statefulSet:
+    pod:
+      labels:
+        app.kubernetes.io/name: tailscale-ingress-proxy
+        app.kubernetes.io/part-of: tailscale
+        hemera.edeneast.dev/proxy-group: ingress-proxies
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              hemera.edeneast.dev/proxy-group: ingress-proxies
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    hemera.edeneast.dev/proxy-group: ingress-proxies
+      tailscaleContainer:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi

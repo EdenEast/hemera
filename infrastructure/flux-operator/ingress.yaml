@@ -4,6 +4,8 @@ kind: Ingress
 metadata:
   name: flux-operator-tailscale
   namespace: flux-system
+  annotations:
+    tailscale.com/proxy-group: ingress-proxies
 spec:
   ingressClassName: tailscale
   tls:

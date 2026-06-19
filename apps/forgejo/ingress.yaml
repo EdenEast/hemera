@@ -21,6 +21,8 @@ kind: Ingress
 metadata:
   name: forgejo-tailscale
   namespace: forgejo
+  annotations:
+    tailscale.com/proxy-group: ingress-proxies
 spec:
   ingressClassName: tailscale
   tls:

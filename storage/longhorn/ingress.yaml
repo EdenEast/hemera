@@ -23,6 +23,8 @@ kind: Ingress
 metadata:
   name: longhorn-tailscale
   namespace: longhorn-system
+  annotations:
+    tailscale.com/proxy-group: ingress-proxies
 spec:
   ingressClassName: tailscale
   tls:

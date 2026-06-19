@@ -21,6 +21,8 @@ kind: Ingress
 metadata:
   name: audiobookshelf-tailscale
   namespace: audiobookshelf
+  annotations:
+    tailscale.com/proxy-group: ingress-proxies
 spec:
   ingressClassName: tailscale
   tls:
