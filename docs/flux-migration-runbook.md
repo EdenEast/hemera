@@ -126,6 +126,7 @@ Expected Kustomizations:
 ```text
 flux-system
 infrastructure
+flux-instance
 operators
 storage
 access
@@ -139,6 +140,7 @@ Reconciliation dependencies are:
 infrastructure -> operators
 infrastructure -> storage
 infrastructure -> access
+infrastructure -> flux-instance
 operators + storage + access -> apps
 operators + storage + access -> monitoring
 ```
@@ -202,6 +204,7 @@ Force an area to reconcile:
 
 ```sh
 flux reconcile kustomization infrastructure -n flux-system
+flux reconcile kustomization flux-instance -n flux-system
 flux reconcile kustomization operators -n flux-system
 flux reconcile kustomization storage -n flux-system
 flux reconcile kustomization access -n flux-system

@@ -1,0 +1,21 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flux-operator-tailscale
+  namespace: flux-system
+spec:
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - flux
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: flux-operator
+                port:
+                  name: http-web

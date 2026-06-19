@@ -24,6 +24,7 @@ Flux reconciles top-level areas from `clusters/k3s/`:
 infrastructure -> operators
 infrastructure -> storage
 infrastructure -> access
+infrastructure -> flux-instance
 operators + storage + access -> apps
 operators + storage + access -> monitoring
 ```
@@ -31,6 +32,16 @@ operators + storage + access -> monitoring
 `storage` uses `prune: false` to reduce the chance of deleting stateful storage resources accidentally. Other areas use `prune: true`.
 
 Each deployable app or component owns its local `kustomization.yaml` and namespace resources. Helm-managed components use Flux `HelmRepository` and `HelmRelease` resources with exact chart versions matching the current deployed versions.
+
+## Web UI
+
+Hemera installs Flux Operator in `flux-system` to provide the Flux Status Web UI and to manage the Flux instance declaratively. The Web UI is exposed through the Tailscale ingress at:
+
+```text
+https://flux
+```
+
+The Flux Operator chart is managed from `infrastructure/flux-operator/`. The `FluxInstance` resource lives in `infrastructure/flux-instance/` and mirrors Hemera's bootstrap settings.
 
 ## Manual fallback
 
