@@ -32,6 +32,10 @@ _Avoid_: Terraform provisioner, first boot, manual install
 A temporary operating mode where Kubernetes resources are organized as future GitOps inputs but applied manually by the operator.
 _Avoid_: ad-hoc kubectl, live edits, permanent manual deployment
 
+**GitOps Controller**:
+The in-cluster automation responsible for reconciling Hemera's Kubernetes resources from git. In Hemera, this role is filled by Flux controllers.
+_Avoid_: operator, manual deployer
+
 **Longhorn Storage**:
 Replicated Kubernetes block storage used for stateful application data and configuration that must survive Cluster Node drains or VM-level failures while Thor remains healthy. Hemera hosts Longhorn Storage on Worker Nodes, not Control Plane Nodes.
 _Avoid_: shared disk, backup storage, media storage

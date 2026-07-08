@@ -1,0 +1,67 @@
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: kube-prometheus-stack-alertmanager
+  namespace: monitoring
+spec:
+  route:
+    groupBy:
+      - namespace
+      - alertname
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 12h
+    receiver: discord
+    routes:
+      - receiver: "null"
+        matchers:
+          - name: alertname
+            matchType: =
+            value: Watchdog
+      - receiver: discord
+        matchers:
+          - name: alertname
+            matchType: =
+            value: InfoInhibitor
+  receivers:
+    - name: "null"
+    - name: discord
+      discordConfigs:
+        - apiURL:
+            name: alertmanager-discord-webhook
+            key: webhook_url
+          sendResolved: true
+  inhibitRules:
+    - sourceMatch:
+        - name: severity
+          matchType: =
+          value: critical
+      targetMatch:
+        - name: severity
+          matchType: =~
+          value: warning|info
+      equal:
+        - namespace
+        - alertname
+    - sourceMatch:
+        - name: severity
+          matchType: =
+          value: warning
+      targetMatch:
+        - name: severity
+          matchType: =
+          value: info
+      equal:
+        - namespace
+        - alertname
+    - sourceMatch:
+        - name: alertname
+          matchType: =
+          value: InfoInhibitor
+      targetMatch:
+        - name: severity
+          matchType: =
+          value: info
+      equal:
+        - namespace
