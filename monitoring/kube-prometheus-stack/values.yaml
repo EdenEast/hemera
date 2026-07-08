@@ -85,6 +85,7 @@ prometheus:
         - port: http-prom
           interval: 30s
   prometheusSpec:
+    externalUrl: https://prometheus.cerberus-tilapia.ts.net
     retention: 14d
     scrapeInterval: 30s
     evaluationInterval: 30s

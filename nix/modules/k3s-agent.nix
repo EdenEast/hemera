@@ -1,5 +1,5 @@
 {config, ...}: {
-  networking.firewall.allowedTCPPorts = [10250];
+  networking.firewall.allowedTCPPorts = [9100 10250];
   networking.firewall.allowedUDPPorts = [8472];
   networking.firewall.trustedInterfaces = ["cni0" "flannel.1"];
 

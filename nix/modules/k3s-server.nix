@@ -3,7 +3,7 @@
   lib,
   ...
 }: {
-  networking.firewall.allowedTCPPorts = [2379 2380 6443 10250];
+  networking.firewall.allowedTCPPorts = [2379 2380 6443 9100 10250];
   networking.firewall.allowedUDPPorts = [8472];
   networking.firewall.trustedInterfaces = ["cni0" "flannel.1"];
 
