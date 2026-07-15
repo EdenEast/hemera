@@ -32,6 +32,11 @@ data:
             icon: hl-audiobookshelf
             url: https://audiobookshelf.cerberus-tilapia.ts.net
             statuscheck: true
+          - title: immich
+            description: photo and video backup
+            icon: hl-immich
+            url: https://photos.cerberus-tilapia.ts.net
+            statuscheck: true
           - title: manga
             description: suwayomi manga reader
             icon: >-

@@ -4,5 +4,6 @@ resources:
   - audiobookshelf
   - dashy
   - forgejo
+  - immich
   - send
   - suwayomi
