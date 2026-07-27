@@ -27,3 +27,21 @@ spec:
       port: 2222
       targetPort: ssh
       protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forgejo-ssh-direct
+  namespace: forgejo
+  annotations:
+    tailscale.com/hostname: git-ssh-direct
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/name: forgejo
+  ports:
+    - name: ssh
+      port: 2222
+      targetPort: ssh
+      protocol: TCP

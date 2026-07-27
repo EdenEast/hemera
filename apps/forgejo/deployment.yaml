@@ -49,11 +49,11 @@ spec:
             - name: FORGEJO__security__INSTALL_LOCK
               value: "true"
             - name: FORGEJO__server__DOMAIN
-              value: git.hemera.local
+              value: git.cerberus-tilapia.ts.net
             - name: FORGEJO__server__ROOT_URL
-              value: http://git.hemera.local/
+              value: https://git.cerberus-tilapia.ts.net/
             - name: FORGEJO__server__SSH_DOMAIN
-              value: git.hemera.local
+              value: git-ssh-direct.cerberus-tilapia.ts.net
             - name: FORGEJO__server__DISABLE_SSH
               value: "false"
             - name: FORGEJO__server__START_SSH_SERVER
