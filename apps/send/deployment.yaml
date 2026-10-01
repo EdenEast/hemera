@@ -25,7 +25,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: send
-          image: registry.gitlab.com/timvisee/send:latest
+          image: registry.gitlab.com/timvisee/send:v3.4.27
           imagePullPolicy: IfNotPresent
           env:
             - name: DETECT_BASE_URL

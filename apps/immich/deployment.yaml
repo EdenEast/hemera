@@ -27,7 +27,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: immich-server
-          image: ghcr.io/immich-app/immich-server:v3.0.3
+          image: ghcr.io/immich-app/immich-server:v3.2.4
           imagePullPolicy: IfNotPresent
           env:
             - name: TZ
@@ -117,7 +117,7 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: immich-machine-learning
-          image: ghcr.io/immich-app/immich-machine-learning:v3.0.3
+          image: ghcr.io/immich-app/immich-machine-learning:v3.2.4
           imagePullPolicy: IfNotPresent
           env:
             - name: TZ
