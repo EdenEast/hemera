@@ -25,9 +25,10 @@ spec:
         fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: suwayomi
-          # version v2.3.2223 and above changed the extension store system and breaks extensions
+          # Version v2.3.2223 changed extension repositories to extension stores.
+          # Verify configured extension stores after upgrading from an older version.
           # https://github.com/Suwayomi/Suwayomi-Server/releases/tag/v2.3.2223
-          image: ghcr.io/suwayomi/suwayomi-server:v2.2.2100
+          image: ghcr.io/suwayomi/suwayomi-server:v2.4.2366
           imagePullPolicy: IfNotPresent
           env:
             - name: TZ
