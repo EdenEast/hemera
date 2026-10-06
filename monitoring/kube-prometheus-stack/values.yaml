@@ -54,6 +54,8 @@ grafana:
       - ReadWriteOnce
     size: 5Gi
   sidecar:
+    image:
+      tag: 2.7.4
     dashboards:
       enabled: true
       label: grafana_dashboard
