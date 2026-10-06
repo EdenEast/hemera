@@ -20,7 +20,6 @@ spec:
       retries: 3
   upgrade:
     crds: CreateReplace
-    disableWait: true
     remediation:
       retries: 3
   valuesFrom:
