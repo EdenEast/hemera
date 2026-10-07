@@ -60,7 +60,7 @@ locals {
       root_disk_gb          = 40
       root_datastore_id     = "local-lvm"
       longhorn_data_disk_gb = 400
-      longhorn_datastore_id = "local-lvm"
+      longhorn_datastore_id = "longhorn-lvm"
     }
     k8s-cp-02 = {
       vm_id                 = 502
@@ -115,7 +115,7 @@ locals {
 
 resource "proxmox_storage_lvmthin" "longhorn" {
   id           = "longhorn-lvm"
-  nodes        = ["node-02", "node-03"]
+  nodes        = ["node-01", "node-02", "node-03"]
   volume_group = "vg-longhorn"
   thin_pool    = "longhorn"
   content      = ["images"]

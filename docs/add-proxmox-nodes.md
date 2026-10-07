@@ -217,23 +217,36 @@ If `local-lvm` is missing, stop and fix the Proxmox installation/storage layout 
 
 Skip this section for control-plane-only Proxmox hosts.
 
-Identify the dedicated Longhorn disk. Example: `/dev/sdb`.
+Identify the dedicated Longhorn disk by its stable `/dev/disk/by-id/` path and verify its serial. For the replacement node-01, the SSD is `ata-T-FORCE_1TB_PM252512120010200096`; Proxmox is installed on the separate NVMe. Inspect the disk before initializing it:
 
 ```bash
-ssh root@192.168.2.54 '
-  pvcreate /dev/sdb
-  vgcreate vg-longhorn /dev/sdb
-  lvcreate -l 100%FREE -T vg-longhorn/longhorn
-  pvesm add lvmthin longhorn-lvm --vgname vg-longhorn --thinpool longhorn --content images,rootdir
-  pvesm status
+ssh root@192.168.2.51 '
+  disk=/dev/disk/by-id/ata-T-FORCE_1TB_PM252512120010200096
+  lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS,SERIAL "$disk"
+  wipefs --no-act "$disk"
+  pvs
+  lvs
 '
 ```
 
+For a fresh disk only, confirm that it has the expected serial, no partitions, filesystem signatures, mounts, or existing LVM allocation, and is separate from the OS disk. After authorizing initialization, create the pool:
+
+```bash
+ssh root@192.168.2.51 'set -eu
+  disk=/dev/disk/by-id/ata-T-FORCE_1TB_PM252512120010200096
+  pvcreate "$disk"
+  vgcreate vg-longhorn "$disk"
+  lvcreate --type thin-pool --name longhorn --extents 90%FREE vg-longhorn
+'
+```
+
+The replacement node-01 already has this pool. Skip initialization when `vg-longhorn/longhorn` exists on the intended disk.
+
 Expected:
 
-- `longhorn-lvm` appears in `pvesm status`.
+- `vg-longhorn/longhorn` exists as an LVM thin pool, with free extents left for maintenance.
 
-If Terraform manages this storage for the host, make sure the Terraform resource matches the actual state before applying.
+Add the host to `proxmox_storage_lvmthin.longhorn.nodes` in `terraform/proxmox/main.tf`. Terraform registers `longhorn-lvm` and allocates each worker's virtual data disk. Nix formats and mounts that virtual disk at `/var/lib/longhorn` inside the worker. After applying Terraform, `longhorn-lvm` should appear as active in `pvesm status`.
 
 ---
 
