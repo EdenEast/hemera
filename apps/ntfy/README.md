@@ -25,10 +25,11 @@ relay or Firebase configuration is enabled.
 
 ## Administrator credentials
 
-The initial administrator is `eden`. The generated password is stored locally in
-`generated/ntfy-admin.json`, which Git ignores, with file permissions `0600`.
-Transfer it to your password manager. `auth.sealed.yaml` contains the encrypted password
-hash, not the plaintext password.
+The initial administrator is `eden`. Recover its credentials from
+`nix/secrets/ntfy-admin.age` using a private key corresponding to any SSH public key in
+`nix/public_keys/`. See the [encrypted secrets instructions](../../nix/secrets/README.md).
+The local copy in `generated/ntfy-admin.json` is ignored by Git with file permissions
+`0600`. `auth.sealed.yaml` contains the encrypted password hash, not the plaintext password.
 
 The Secret was sealed using `infrastructure/sealed-secrets/pub-cert.pem`. The cluster's
 current certificate is newer, but its controller still accepts this Secret. Validation
