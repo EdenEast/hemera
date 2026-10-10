@@ -56,6 +56,11 @@ data:
       - name: operations
         icon: fas fa-server
         items:
+          - title: ntfy
+            description: push notifications
+            icon: fas fa-bell
+            url: https://ntfy.cerberus-tilapia.ts.net
+            statuscheck: true
           - title: grafana
             description: metrics and dashboards
             icon: hl-grafana
