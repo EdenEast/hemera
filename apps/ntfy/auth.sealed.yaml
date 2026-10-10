@@ -1,0 +1,14 @@
+---
+apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: ntfy-auth
+  namespace: ntfy
+spec:
+  encryptedData:
+    users: AgB2YHWx0fhZDaeBv++EQi2dhmFspOOcODXh2ABk0CeoKPYUth0Tn0p9ddpjlC1N7G7088FTHeXpK59W6xSKtoMrf3hwjcmxNXyF9vMdGEsmJXB8ih6bAzqgO/iNRmr0LZmsBQVNIXJocNwRTf9q9Ase7ghtWF2fUCjXkuYi+q+yq123bUFpzONWATl9BYtkiOefUEFkiwVTReEK9Qo3zbHhnsWcAWGOm2/GmwU7lJ6fowoEqOsUVCzMZz1PPlKtO5whRmGIjGwoGlK2PIeoWTngznaoJrVTdyOj8Zc6rGqXmfSauCpdxu5xY66G64kCTx0cv6TgP2+3M0mGSI/D1T+DOVTfHCiKdBTfzwlzvTiro/Drq/g0QX3jurvRdijV9r/GwK/12SBT+EQxHwozIOrdsmcVfXAznSfNUGrtSF7cKDZ3DunBSAhL1UW0Udr+U6JqvtEFgmBh04U4XcEm408OAvrN3IU0Zw+qqi7Vu78dY90sk1UrmCp3KX0cBgGD1IOjQUJGLuWURQJ8C5+X5BqgPJVLYfDDE71aDOYzxxpVSxd9ZgyInSHPFvXON7FtMCF5FHq3bGmPCzKovA7RWaqbCNFqd+V/b5i6671/FS+x1405RSa80PWottth0Vh2M0jiVnWIXSJm3Dg6m5yrv+PE3RDORl6+eSOEc7EzvkaG7OQwBSKaod7ph/GH70BLA/YWjP0xon7cMZ5lG/4TlUyOaab5RzQqd+qVwklin2FMbPSGupxzmfdWfAPVnkXb0jBDUwuYeMophRlKWK/bPnm0OCvCtW3Tnw==
+  template:
+    metadata:
+      name: ntfy-auth
+      namespace: ntfy
+    type: Opaque

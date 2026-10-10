@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ntfy-config
+  namespace: ntfy
+data:
+  server.yml: |
+    base-url: https://ntfy.cerberus-tilapia.ts.net
+    listen-http: ":8080"
+    cache-file: /var/lib/ntfy/cache.db
+    cache-duration: 24h
+    auth-file: /var/lib/ntfy/auth.db
+    auth-default-access: deny-all
+    enable-login: true
+    enable-signup: false
+    behind-proxy: true

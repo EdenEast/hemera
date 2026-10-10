@@ -5,5 +5,6 @@ resources:
   - dashy
   - forgejo
   - immich
+  - ntfy
   - send
   - suwayomi
