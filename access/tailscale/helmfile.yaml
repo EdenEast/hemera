@@ -1,5 +1,5 @@
 repositories:
-  - name: longhorn
+  - name: tailscale
     url: https://pkgs.tailscale.com/helmcharts
 
 releases:
