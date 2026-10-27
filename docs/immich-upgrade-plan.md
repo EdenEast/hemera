@@ -7,8 +7,40 @@ Keep PostgreSQL, VectorChord, pgvector, Valkey, storage paths, and machine-learn
 settings unchanged for this deployment. Review and approve the final manifest diff
 before changing files or deploying.
 
-This is a plan, not an executed upgrade. Immich was excluded from the application
-updates deployed on 2026-10-27.
+Immich was initially excluded from the other application updates on 2026-10-27.
+The application-only upgrade was subsequently authorized and deployed that day.
+The procedure below is retained with the execution record and its verification limits.
+
+## Execution record: 2026-10-27
+
+- Maintenance commit `e620a92` stopped both application Deployments through Git and
+  Flux. Upgrade commit `b67d472` changed both images to `v3.3.5` and restored one
+  replica each. The net application manifest change is only the two image tags.
+- An online database dump was restored into an isolated temporary namespace using
+  the same PostgreSQL/extension image. The target server applied all five migrations,
+  reported no schema drift, and answered its ping endpoint. The test had no production
+  volumes, credentials, Service, ingress, or network access. It used empty media
+  storage, API-only workers, and a test-only mount-check override; this was not a
+  full media, background-job, or machine-learning rehearsal.
+- After stopping the production application pods, a final database dump was taken
+  and successfully restored into a second isolated database. A Valkey RDB snapshot
+  passed its checksum and structural check.
+- All five production migrations succeeded. Both application pods were ready with
+  zero restarts at verification. Asset, face, and person counts remained 3,313,
+  8,629, and 330 respectively; no face records lacked the new required fields.
+- HTTPS server ping, the server version endpoint, and machine-learning ping passed.
+  Three original media files were checked for readability. PostgreSQL and Valkey
+  retained their original pod UIDs and image digests; extension versions stayed
+  VectorChord `0.4.3` and pgvector `0.8.0`.
+- The temporary rehearsal namespace was deleted. Private recovery files are retained
+  outside the worktree at
+  `/home/eden/.local/state/hemera/backups/immich-upgrade-20261027T040646Z/`.
+  They include `final.dump`, `globals.sql`, `valkey.rdb`, checksums, and verification
+  evidence. These files contain private data and are not committed.
+- No complete backup or snapshot of the approximately 97 GB photo library was taken
+  for this deployment, and independent library backup coverage remains unverified.
+  Authenticated browsing, new-upload processing, and mobile backup were not tested.
+  Those user-facing checks remain follow-up acceptance checks.
 
 ## Verified baseline
 
