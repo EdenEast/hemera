@@ -31,18 +31,21 @@ data:
             description: audiobooks and podcasts
             icon: hl-audiobookshelf
             url: https://audiobookshelf.cerberus-tilapia.ts.net
-            statuscheck: true
+            statusCheckUrl: http://audiobookshelf.audiobookshelf.svc.cluster.local
+            statusCheck: true
           - title: immich
             description: photo and video backup
             icon: hl-immich
             url: https://photos.cerberus-tilapia.ts.net
-            statuscheck: true
+            statusCheckUrl: http://immich-server.immich.svc.cluster.local
+            statusCheck: true
           - title: manga
             description: suwayomi manga reader
             icon: >-
               https://github.com/suwayomi/suwayomi-server/raw/master/server/src/main/resources/icon/faviconlogo.png
             url: https://manga.cerberus-tilapia.ts.net
-            statuscheck: true
+            statusCheckUrl: http://manga.manga.svc.cluster.local
+            statusCheck: true
 
       - name: development
         icon: fas fa-code-branch
@@ -51,7 +54,8 @@ data:
             description: git hosting
             icon: hl-forgejo
             url: https://git.cerberus-tilapia.ts.net
-            statuscheck: true
+            statusCheckUrl: http://forgejo.forgejo.svc.cluster.local
+            statusCheck: true
 
       - name: operations
         icon: fas fa-server
@@ -60,23 +64,28 @@ data:
             description: push notifications
             icon: fas fa-bell
             url: https://ntfy.cerberus-tilapia.ts.net
-            statuscheck: true
+            statusCheckUrl: http://ntfy.ntfy.svc.cluster.local
+            statusCheck: true
           - title: grafana
             description: metrics and dashboards
             icon: hl-grafana
             url: https://grafana.cerberus-tilapia.ts.net
-            statuscheck: true
+            statusCheckUrl: http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local
+            statusCheck: true
           - title: prometheus
             description: system statistics aggregation
             icon: hl-prometheus
             url: https://prometheus.cerberus-tilapia.ts.net
+            statusCheckUrl: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
           - title: flux
             description: gitops operator
             icon: >-
               https://github.com/homarr-labs/dashboard-icons/raw/main/png/flux-operator.png
             url: https://flux.cerberus-tilapia.ts.net
+            statusCheckUrl: http://flux-operator.flux-system.svc.cluster.local:9080
           - title: longhorn
             description: cluster storage
             icon: hl-longhorn
             url: https://longhorn.cerberus-tilapia.ts.net
-            statuscheck: true
+            statusCheckUrl: http://longhorn-frontend.longhorn-system.svc.cluster.local
+            statusCheck: true
