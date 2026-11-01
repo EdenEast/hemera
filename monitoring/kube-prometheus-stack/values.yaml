@@ -116,45 +116,45 @@ additionalPrometheusRulesMap:
             labels:
               severity: critical
             annotations:
-              summary: Cluster Node is not Ready
-              description: "{{ $labels.node }} has been NotReady for more than 10 minutes."
+              summary: Node not ready
+              description: "Node {{ $labels.node }} has been unavailable for more than 10 minutes."
           - alert: HemeraPodCrashLooping
             expr: max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff",namespace!~"kube-system|monitoring"}[5m]) >= 1
             for: 15m
             labels:
               severity: warning
             annotations:
-              summary: Pod is crash looping
-              description: "{{ $labels.namespace }}/{{ $labels.pod }} container {{ $labels.container }} is in CrashLoopBackOff."
+              summary: Container keeps restarting
+              description: "Container {{ $labels.container }} in {{ $labels.namespace }}/{{ $labels.pod }} is repeatedly failing to start (CrashLoopBackOff)."
           - alert: HemeraDeploymentReplicasUnavailable
             expr: kube_deployment_status_replicas_unavailable > 0
             for: 15m
             labels:
               severity: warning
             annotations:
-              summary: Deployment has unavailable replicas
-              description: "{{ $labels.namespace }}/{{ $labels.deployment }} has unavailable replicas for more than 15 minutes."
+              summary: Deployment below desired replicas
+              description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has had unavailable replicas for more than 15 minutes."
           - alert: HemeraPersistentVolumeClaimPending
             expr: kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
             for: 15m
             labels:
               severity: warning
             annotations:
-              summary: PersistentVolumeClaim is pending
-              description: "{{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} has been pending for more than 15 minutes."
+              summary: Volume claim waiting for storage
+              description: "Volume claim {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} has been pending for more than 15 minutes."
           - alert: HemeraFluxKustomizationNotReady
             expr: gotk_reconcile_condition{kind="Kustomization",type="Ready",status="False"} == 1
             for: 10m
             labels:
               severity: warning
             annotations:
-              summary: Flux Kustomization is not ready
-              description: "Flux Kustomization {{ $labels.name }} in {{ $labels.namespace }} is not ready."
+              summary: Flux configuration failing
+              description: "Flux cannot apply Kustomization {{ $labels.namespace }}/{{ $labels.name }}."
           - alert: HemeraFluxHelmReleaseNotReady
             expr: gotk_reconcile_condition{kind="HelmRelease",type="Ready",status="False"} == 1
             for: 10m
             labels:
               severity: warning
             annotations:
-              summary: Flux HelmRelease is not ready
-              description: "Flux HelmRelease {{ $labels.name }} in {{ $labels.namespace }} is not ready."
+              summary: Helm release failing
+              description: "Flux cannot reconcile Helm release {{ $labels.namespace }}/{{ $labels.name }}."
