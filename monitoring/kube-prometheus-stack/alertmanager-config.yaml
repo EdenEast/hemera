@@ -32,6 +32,16 @@ spec:
             name: alertmanager-discord-webhook
             key: webhook_url
           sendResolved: true
+          title: >-
+            {{ .Status | toUpper }} · {{ if .CommonLabels.severity }}{{ .CommonLabels.severity | toUpper }}{{ else }}ALERT{{ end }} · {{ .CommonLabels.alertname }} ({{ len .Alerts }})
+          message: |-
+            {{ range .Alerts }}
+            **{{ .Status | toUpper }} · {{ if .Annotations.summary }}{{ .Annotations.summary }}{{ else }}{{ .Labels.alertname }}{{ end }}**
+            **Affected:** {{ if .Labels.node }}{{ .Labels.node }}{{ else if and (eq .Labels.job "node-exporter") .Labels.instance }}{{ .Labels.instance }}{{ else }}{{ if .Labels.namespace }}{{ .Labels.namespace }}/{{ end }}{{ if .Labels.pod }}{{ .Labels.pod }}{{ else if .Labels.deployment }}{{ .Labels.deployment }}{{ else if .Labels.persistentvolumeclaim }}{{ .Labels.persistentvolumeclaim }}{{ else if .Labels.name }}{{ .Labels.name }}{{ else if .Labels.instance }}{{ .Labels.instance }}{{ else }}cluster{{ end }}{{ if .Labels.container }} · container {{ .Labels.container }}{{ end }}{{ end }}
+            {{ if eq .Status "resolved" }}**Recovered.** Previous alert details:
+            {{ end }}{{ if .Annotations.description }}{{ .Annotations.description }}{{ else if not .Annotations.summary }}No description provided by this alert rule.{{ end }}
+            {{ if .GeneratorURL }}[Investigate in Prometheus]({{ .GeneratorURL }}){{ else }}[View Prometheus alerts](https://prometheus.cerberus-tilapia.ts.net/alerts){{ end }}{{ if .Annotations.runbook_url }} · [Troubleshooting guide]({{ .Annotations.runbook_url }}){{ end }}
+            {{ end }}
   inhibitRules:
     - sourceMatch:
         - name: severity
